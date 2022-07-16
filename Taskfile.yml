@@ -1,0 +1,14 @@
+version: 3
+
+tasks:
+  init:
+    cmds:
+      - cd app && pnpm i
+      - cd api && cargo build
+  dev:back:
+    cmds:
+      - cd api && cargo watch -x run
+  dev:front:
+    cmds:
+      - cd app && pnpm run dev
+
