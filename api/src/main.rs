@@ -3,7 +3,7 @@ use dotenvy::dotenv;
 #[macro_use]
 extern crate rocket;
 
-mod state;
+mod states;
 mod twitch;
 
 #[get("/")]
@@ -13,7 +13,7 @@ fn index() -> &'static str {
 
 #[get("/login")]
 async fn login_to_twitch(
-    credentials: &rocket::State<state::TwitchClientCredentialsState>,
+    credentials: &rocket::State<states::TwitchClientCredentialsState>,
 ) -> &'static str {
     println!("{}", credentials.access_token);
     "Hello"
@@ -22,7 +22,7 @@ async fn login_to_twitch(
 #[launch]
 async fn rocket() -> _ {
     dotenv().ok();
-    let twitch_app_credentials = state::TwitchClientCredentialsState::new().await;
+    let twitch_app_credentials = states::TwitchClientCredentialsState::new().await;
 
     rocket::build()
         .manage(twitch_app_credentials)
