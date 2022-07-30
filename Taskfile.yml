@@ -6,6 +6,9 @@ tasks:
       - cd app && pnpm i
       - cd api && cargo build
   dev:back:
+    env:
+      RUST_BACKTRACE: 1
+      RUST_LOG: actix_web=info
     cmds:
       - cd api && cargo watch -x 'run --bin api'
   dev:front:

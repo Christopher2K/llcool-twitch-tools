@@ -3,9 +3,10 @@ use std::future::{ready, Ready};
 use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::web::Data;
 use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 
 use crate::states;
+
+const LOG_TARGET: &'static str = "actix_web::middlewares::twitch_client_credentials";
 
 pub struct TwitchClientCredentialsMiddleware<S> {
     service: S,
@@ -31,16 +32,33 @@ where
             match mb_lock {
                 Some(lock) => {
                     // Can read the state
+                    log::info!(
+                        target: LOG_TARGET,
+                        "Checking if credentials are still valid"
+                    );
                     let should_renew = {
                         let credentials = lock.twitch_credentials.read().unwrap();
                         credentials.should_renew()
                     };
 
                     if should_renew {
+                        log::info!(target: LOG_TARGET, "Renewing app twitch credentials...");
                         let new_credentials = states::TwitchClientCredentials::new().await;
+                        log::info!(
+                            target: LOG_TARGET,
+                            "Setting new credentials in actix state..."
+                        );
                         let mut credentials = lock.twitch_credentials.write().unwrap();
                         *credentials = new_credentials;
+                        log::info!(target: LOG_TARGET, "Proceed to request...");
                     };
+
+                    if !should_renew {
+                        log::info!(
+                            target: LOG_TARGET,
+                            "Credentials are still valid, proceed..."
+                        );
+                    }
 
                     let res = fut.await?;
                     Ok(res)
