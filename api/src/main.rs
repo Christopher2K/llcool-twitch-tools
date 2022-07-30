@@ -1,34 +1,34 @@
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenvy::dotenv;
+
 use std::sync::RwLock;
 
-#[macro_use]
-extern crate rocket;
-
-mod guards;
+mod middlewares;
+mod models;
+mod routes;
 mod states;
 mod twitch;
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello"
-}
-
-#[get("/login")]
-async fn login_to_twitch(
-    locked_credentials: &rocket::State<RwLock<states::TwitchClientCredentialsState>>,
-    _c: guards::twitch_credentials_guard::TwitchCredentialsGuard,
-) -> String {
-    let lock = locked_credentials.read().unwrap();
-    String::from(&lock.access_token)
-}
-
-#[launch]
-async fn rocket() -> _ {
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    let twitch_app_credentials = states::TwitchClientCredentialsState::new().await;
-    let thread_safe_app_credentials = RwLock::new(twitch_app_credentials);
+    let twitch_app_credentials = states::TwitchClientCredentials::new().await;
+    let app_data = web::Data::new(states::AppState {
+        twitch_credentials: RwLock::new(twitch_app_credentials),
+    });
 
-    rocket::build()
-        .manage(thread_safe_app_credentials)
-        .mount("/", routes![index, login_to_twitch])
+    HttpServer::new(move || {
+        App::new()
+            .app_data(app_data.clone())
+            .wrap(Logger::default())
+            .wrap(middlewares::twitch_client_credentials::TwitchClientCredentialsMiddlewareFactory)
+            .service(
+                web::scope("/api")
+                    .service(web::scope("/auth").service(routes::auth::login_twitch))
+                    .service(web::scope("/_dev").service(routes::utils::health_check)),
+            )
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }

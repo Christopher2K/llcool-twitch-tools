@@ -1,6 +1,6 @@
 <script lang="ts">
   import { apiUrl } from '@app/env'
-  const loginToTwitchUrl = `${apiUrl}/login`
+  const loginToTwitchUrl = `${apiUrl}/auth/login`
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">

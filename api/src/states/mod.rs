@@ -1,13 +1,16 @@
+use std::sync::RwLock;
+
 use time::ext::NumericalDuration;
 
 use crate::twitch;
 
-pub struct TwitchClientCredentialsState {
+#[derive(Clone, Debug)]
+pub struct TwitchClientCredentials{
     pub access_token: String,
     pub expire_at_utc: time::OffsetDateTime,
 }
 
-impl TwitchClientCredentialsState {
+impl TwitchClientCredentials {
     pub async fn new() -> Self {
         let credentials = twitch::get_app_access_token()
             .await
@@ -24,4 +27,8 @@ impl TwitchClientCredentialsState {
         let limit = self.expire_at_utc - 1.days();
         now >= limit
     }
+}
+
+pub struct AppState {
+    pub twitch_credentials: RwLock::<TwitchClientCredentials>
 }

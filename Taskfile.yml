@@ -7,7 +7,7 @@ tasks:
       - cd api && cargo build
   dev:back:
     cmds:
-      - cd api && cargo watch -x run
+      - cd api && cargo watch -x 'run --bin api'
   dev:front:
     cmds:
       - cd app && pnpm run dev
