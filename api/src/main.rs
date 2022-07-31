@@ -34,7 +34,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(middlewares::twitch_client_credentials::TwitchClientCredentialsMiddlewareFactory)
             .service(
                 web::scope("/api")
-                    .service(web::scope("/auth").service(routes::auth::login_twitch))
+                    .service(
+                        web::scope("/auth")
+                            .service(routes::auth::login_request_to_twitch)
+                            .service(routes::auth::get_twitch_access_token),
+                    )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
     })

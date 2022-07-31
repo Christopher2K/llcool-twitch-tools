@@ -5,14 +5,16 @@ use time::ext::NumericalDuration;
 use crate::twitch;
 
 #[derive(Clone, Debug)]
-pub struct TwitchClientCredentials{
+pub struct TwitchClientCredentials {
     pub access_token: String,
     pub expire_at_utc: time::OffsetDateTime,
 }
 
 impl TwitchClientCredentials {
     pub async fn new() -> Self {
-        let credentials = twitch::get_app_access_token()
+        let credentials = twitch::TwitchApiConfig::new()
+            .expect("Cannot configure a new TwitchAPI instance, check configuration variables")
+            .get_app_access_token()
             .await
             .expect("Can't get app credentials");
 
@@ -30,5 +32,5 @@ impl TwitchClientCredentials {
 }
 
 pub struct AppState {
-    pub twitch_credentials: RwLock::<TwitchClientCredentials>
+    pub twitch_credentials: RwLock<TwitchClientCredentials>,
 }
