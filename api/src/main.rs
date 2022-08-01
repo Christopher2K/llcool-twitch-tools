@@ -1,6 +1,8 @@
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
 use dotenvy::dotenv;
+use diesel::sqlite::SqliteConnection;
+use diesel::r2d2;
 
 use std::{env, sync::RwLock};
 
@@ -9,12 +11,14 @@ mod models;
 mod routes;
 mod states;
 mod twitch;
+mod types;
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init();
-
+    let database_url = env::var("DATABASE_URL").expect("Missing database url");
     let secret_key = env::var("SECRET_KEY").expect("Missing backend secret key");
     let cookie_key = Key::from(secret_key.as_bytes());
 
@@ -23,9 +27,13 @@ async fn main() -> std::io::Result<()> {
         twitch_credentials: RwLock::new(twitch_app_credentials),
     });
 
+    let manager = r2d2::ConnectionManager::<SqliteConnection>::new(&database_url);
+    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create pool");
+
     HttpServer::new(move || {
         App::new()
             .app_data(app_data.clone())
+            .app_data(web::Data::new(pool.clone()))
             .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
