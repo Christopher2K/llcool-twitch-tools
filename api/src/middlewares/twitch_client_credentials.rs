@@ -4,7 +4,8 @@ use actix_web::dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Tr
 use actix_web::web::Data;
 use futures::future::LocalBoxFuture;
 
-use crate::states;
+use crate::states::twitch_credentials::{ThreadSafeTwitchClientCredentials, TwitchClientCredentials};
+use crate::states::app_config::AppConfig;
 
 const LOG_TARGET: &'static str = "actix_web::middlewares::twitch_client_credentials";
 
@@ -25,7 +26,8 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let mb_lock = req.app_data::<Data<states::AppState>>().cloned();
+        let mb_lock = req.app_data::<Data<ThreadSafeTwitchClientCredentials>>().cloned();
+        let app_config = req.app_data::<Data<AppConfig>>().cloned().expect("Cannot read app configuration");
         let fut = self.service.call(req);
 
         Box::pin(async move {
@@ -37,18 +39,18 @@ where
                         "Checking if credentials are still valid"
                     );
                     let should_renew = {
-                        let credentials = lock.twitch_credentials.read().unwrap();
+                        let credentials = lock.read().unwrap();
                         credentials.should_renew()
                     };
 
                     if should_renew {
                         log::info!(target: LOG_TARGET, "Renewing app twitch credentials...");
-                        let new_credentials = states::TwitchClientCredentials::new().await;
+                        let new_credentials = TwitchClientCredentials::new(&app_config).await;
                         log::info!(
                             target: LOG_TARGET,
                             "Setting new credentials in actix state..."
                         );
-                        let mut credentials = lock.twitch_credentials.write().unwrap();
+                        let mut credentials = lock.write().unwrap();
                         *credentials = new_credentials;
                         log::info!(target: LOG_TARGET, "Proceed to request...");
                     };

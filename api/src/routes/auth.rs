@@ -1,24 +1,25 @@
-use std::env;
-
 use actix_session::Session;
-use actix_web::{get, http::header, web::Query, Error, HttpResponse};
+use actix_web::{get, http::header, web, Error, HttpResponse};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
 
-use crate::twitch;
+use crate::models::user::{self, get_or_create_user};
+use crate::states::app_config::AppConfig;
+use crate::twitch::id_api;
+use crate::types::DbPool;
 
 #[get("/login/authorization")]
-pub async fn login_request_to_twitch(session: Session) -> Result<HttpResponse, Error> {
-    let twitch_api =
-        twitch::TwitchApiConfig::new().expect("Chris: you should make this a shared state");
-
+pub async fn login_request_to_twitch(
+    app_config: web::Data<AppConfig>,
+    session: Session,
+) -> Result<HttpResponse, Error> {
     let oauth_state = thread_rng()
         .sample_iter(&Alphanumeric)
         .take(30)
         .map(char::from)
         .collect::<String>();
 
-    let authorization_url = twitch_api.get_authorization_url(&oauth_state);
+    let authorization_url = id_api::get_authorization_url(&app_config, &oauth_state);
     session.insert("oauth_state", &oauth_state)?;
 
     Ok(HttpResponse::Found()
@@ -42,25 +43,39 @@ pub struct AuthorizedError {
 
 #[get("/login/authorized")]
 pub async fn get_twitch_access_token(
+    pool: web::Data<DbPool>,
+    app_config: web::Data<AppConfig>,
     session: Session,
-    authorized_data: Option<Query<AuthorizedData>>,
-    authorized_error: Option<Query<AuthorizedError>>,
+    authorized_data: Option<web::Query<AuthorizedData>>,
+    authorized_error: Option<web::Query<AuthorizedError>>,
 ) -> Result<HttpResponse, Error> {
     let mb_oauth_state = session.get::<String>("oauth_state")?;
-    let twitch_api =
-        twitch::TwitchApiConfig::new().expect("Chris: you should make this a shared state");
+    let db = pool.get().expect("couldn't get db connection from pool");
 
     let response = match (authorized_data, mb_oauth_state) {
         (Some(query_data), Some(session_oauth_state)) => {
             let AuthorizedData { code, state, .. } = query_data.into_inner();
             if session_oauth_state == state {
-                twitch_api
-                    .get_user_access_token(&code)
+                let redirection_response = id_api::get_user_access_token(&app_config, &code)
                     .await
                     .ok()
                     .and_then(|tokens| session.insert("authorization", tokens).ok())
-                    .and_then(|()| Some(HttpResponse::Found().append_header((header::LOCATION, "http://localhost:3000/app")).finish()))
-                    .unwrap_or_else(|| HttpResponse::InternalServerError().finish())
+                    // .and_then(|()| {
+                    //     twitch::api::get_current_user(, access_token)
+                    //
+                    // })
+                    .and_then(|()| {
+                        Some(
+                            HttpResponse::Found()
+                                .append_header((header::LOCATION, "http://localhost:3000/app"))
+                                .finish(),
+                        )
+                    })
+                    .unwrap_or_else(|| HttpResponse::InternalServerError().finish());
+
+                // get_or_create_user(&db, &user).expect("Cannot create/get new twitch user");
+
+                redirection_response
                 // HttpResponse::Ok().finish()
             } else {
                 // LOG: State does not correspond

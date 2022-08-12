@@ -1,6 +1,7 @@
 table! {
     users (id) {
-        id -> Nullable<Text>,
+        id -> Text,
         username -> Text,
+        twitch_id -> Text,
     }
 }
