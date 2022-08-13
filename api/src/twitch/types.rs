@@ -18,6 +18,15 @@ pub struct TwitchTokenWithRefreshResponse {
     pub expires_in: i64,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct TwitchTokenValidateResponse {
+    pub client_id: String,
+    pub login: String,
+    pub scopes: Vec<String>,
+    pub user_id: String,
+    pub expires_in: u64,
+}
+
 #[derive(Deserialize, Clone)]
 pub struct User {
     pub id: String,

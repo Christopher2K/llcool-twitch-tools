@@ -1,10 +1,15 @@
 use futures::{FutureExt, TryFutureExt};
 use pct_str::{PctString, URIReserved};
+use reqwest::{header, StatusCode};
 
 use std::{future::Future, marker::Send, pin::Pin};
 
 use super::types;
-use crate::states::app_config::AppConfig;
+
+use crate::{
+    errors::{AppError, AppErrorType},
+    states::app_config::AppConfig,
+};
 
 const ID_TWITCH_URL: &'static str = "https://id.twitch.tv";
 
@@ -81,4 +86,75 @@ pub fn get_user_access_token(
         .send()
         .and_then(|response| response.json::<types::TwitchTokenWithRefreshResponse>())
         .boxed()
+}
+
+pub async fn validate_user_token(access_token: &str) -> Result<bool, reqwest::Error> {
+    let url = format!("{}/oauth2/validate", ID_TWITCH_URL);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(url)
+        .header(header::AUTHORIZATION, format!("OAuth {}", access_token))
+        .send()
+        .await?;
+
+    Ok(response.status() == StatusCode::OK)
+}
+
+pub async fn renew_token(
+    app_config: &AppConfig,
+    refresh_token: &str,
+) -> Result<types::TwitchTokenWithRefreshResponse, AppError> {
+    let url = format!("{}/oauth2/token", ID_TWITCH_URL);
+
+    let client = reqwest::Client::new();
+
+    let form = [
+        ("client_id", app_config.client_id.clone()),
+        ("client_secret", app_config.client_secret.clone()),
+        ("grant_type", "refresh_token".to_string()),
+        ("refresh_token", refresh_token.to_string()),
+    ];
+
+    client
+        .post(url)
+        .form(&form)
+        .send()
+        .map_err(|e| {
+            AppError::new(Some(AppErrorType::OAuthStateError))
+                .inner_error(&e.to_string())
+                .extra_context("Cannot call the renew endpoint")
+        })
+        .await?
+        .json::<types::TwitchTokenWithRefreshResponse>()
+        .map_err(|e| {
+            AppError::new(Some(AppErrorType::OAuthStateError))
+                .inner_error(&e.to_string())
+                .extra_context("Cannot call the renew endpoint")
+        })
+        .await
+}
+
+pub async fn revoke_access_token(
+    app_config: &AppConfig,
+    access_token: &str,
+) -> Result<reqwest::Response, AppError> {
+    let url = format!("{}/oauth2/revoke", ID_TWITCH_URL);
+    let client = reqwest::Client::new();
+
+    let form = [
+        ("client_id", app_config.client_id.clone()),
+        ("token", access_token.to_string()),
+    ];
+
+    client
+        .post(url)
+        .form(&form)
+        .send()
+        .map_err(|e| {
+            AppError::new(Some(AppErrorType::OAuthStateError))
+                .inner_error(&e.to_string())
+                .extra_context("Cannot call the revoke endpoint")
+        })
+        .await
 }
