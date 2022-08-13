@@ -286,6 +286,7 @@ version = "0.1.0"
 dependencies = [
  "actix-session",
  "actix-web",
+ "derive_more",
  "diesel",
  "dotenvy",
  "env_logger",

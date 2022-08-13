@@ -60,7 +60,9 @@ pub fn get_app_access_token(
 pub fn get_user_access_token(
     app_config: &AppConfig,
     code: &str,
-) -> Pin<Box<dyn Future<Output = Result<types::TwitchTokenWithRefreshResponse, reqwest::Error>> + Send>> {
+) -> Pin<
+    Box<dyn Future<Output = Result<types::TwitchTokenWithRefreshResponse, reqwest::Error>> + Send>,
+> {
     let url = format!("{}/oauth2/token", ID_TWITCH_URL);
     let redirect_uri = format!("{}/api/auth/login/authorized", app_config.backend_url);
     let data = [

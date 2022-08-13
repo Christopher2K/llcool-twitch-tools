@@ -3,12 +3,15 @@ use actix_web::{get, http::header, web, Error, HttpResponse};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
 
-use crate::models::user::{self, get_or_create_user};
+use crate::enums::session_key::SessionKey;
+use crate::errors::{AppError, AppErrorType};
+use crate::models::user::{get_or_create_user, CreateUser};
+use crate::models::user_session::UserSession;
 use crate::states::app_config::AppConfig;
-use crate::twitch::id_api;
+use crate::twitch::{api, id_api};
 use crate::types::DbPool;
 
-#[get("/login/authorization")]
+#[get("/login")]
 pub async fn login_request_to_twitch(
     app_config: web::Data<AppConfig>,
     session: Session,
@@ -20,7 +23,7 @@ pub async fn login_request_to_twitch(
         .collect::<String>();
 
     let authorization_url = id_api::get_authorization_url(&app_config, &oauth_state);
-    session.insert("oauth_state", &oauth_state)?;
+    session.insert(SessionKey::OAuthState.as_str(), &oauth_state)?;
 
     Ok(HttpResponse::Found()
         .append_header((header::LOCATION, authorization_url))
@@ -48,51 +51,87 @@ pub async fn get_twitch_access_token(
     session: Session,
     authorized_data: Option<web::Query<AuthorizedData>>,
     authorized_error: Option<web::Query<AuthorizedError>>,
-) -> Result<HttpResponse, Error> {
-    let mb_oauth_state = session.get::<String>("oauth_state")?;
-    let db = pool.get().expect("couldn't get db connection from pool");
+) -> Result<HttpResponse, AppError> {
+    let oauth_state = {
+        let error = AppError::new(Some(AppErrorType::OAuthStateError))
+            .extra_context("Cannot get the oauth state from the session");
 
-    let response = match (authorized_data, mb_oauth_state) {
-        (Some(query_data), Some(session_oauth_state)) => {
-            let AuthorizedData { code, state, .. } = query_data.into_inner();
-            if session_oauth_state == state {
-                let redirection_response = id_api::get_user_access_token(&app_config, &code)
-                    .await
-                    .ok()
-                    .and_then(|tokens| session.insert("authorization", tokens).ok())
-                    // .and_then(|()| {
-                    //     twitch::api::get_current_user(, access_token)
-                    //
-                    // })
-                    .and_then(|()| {
-                        Some(
-                            HttpResponse::Found()
-                                .append_header((header::LOCATION, "http://localhost:3000/app"))
-                                .finish(),
-                        )
-                    })
-                    .unwrap_or_else(|| HttpResponse::InternalServerError().finish());
+        session
+            .get::<String>(&SessionKey::OAuthState.as_str())
+            .map_err(|_| error.clone())
+            .and_then(|mb_state| match mb_state {
+                Some(state) => Ok(state),
+                None => Err(error.clone()),
+            })
+    }?;
 
-                // get_or_create_user(&db, &user).expect("Cannot create/get new twitch user");
+    let db = pool
+        .get()
+        .map_err(|err| AppError::new(None).inner_error(&err.to_string()))?;
 
-                redirection_response
-                // HttpResponse::Ok().finish()
-            } else {
-                // LOG: State does not correspond
-                HttpResponse::InternalServerError().finish()
-            }
+    let base_oauth_error = AppError::new(Some(AppErrorType::OAuthStateError));
+    let base_twitch_request_error = AppError::new(Some(AppErrorType::TwitchApiError));
+
+    if let Some(error) = authorized_error {
+        let AuthorizedError {
+            error_description, ..
+        } = error.into_inner();
+        Err(base_oauth_error.extra_context(&error_description))
+    } else if let Some(query_data) = authorized_data {
+        let AuthorizedData { code, state, .. } = query_data.into_inner();
+
+        if oauth_state != state {
+            return Err(base_oauth_error.extra_context("State does not match"));
+        } else {
+            let tokens = id_api::get_user_access_token(&app_config, &code)
+                .await
+                .map_err(|err| {
+                    base_twitch_request_error
+                        .clone()
+                        .inner_error(&err.to_string())
+                })?;
+
+            let user_profile = api::get_current_user(&app_config, &tokens.access_token)
+                .await
+                .map_err(|err| {
+                    base_twitch_request_error
+                        .clone()
+                        .inner_error(&err.to_string())
+                })?;
+
+            let db_user = get_or_create_user(
+                &db,
+                CreateUser {
+                    username: user_profile.login,
+                    twitch_id: user_profile.id,
+                },
+            )
+            .map_err(|err| {
+                AppError::new(Some(AppErrorType::DatabaseError))
+                    .inner_error(&err.to_string())
+                    .extra_context("Cannot create/get new twitch user")
+            })?;
+
+            let user_session = UserSession::new(&db_user, &tokens.access_token);
+
+            session.remove(&SessionKey::OAuthState.as_str());
+            session
+                .insert(SessionKey::User.as_str(), user_session)
+                .map_err(|err| {
+                    base_oauth_error
+                        .inner_error(&err.to_string())
+                        .extra_context("Cannot write user in the state")
+                })?;
+
+            Ok(HttpResponse::Found()
+                .append_header((
+                    header::LOCATION,
+                    format!("{}/app", &app_config.frontend_url),
+                ))
+                .finish())
         }
-        _ => {
-            if let Some(error) = authorized_error {
-                // LOG: OAuth Error
-                println!("{:?}", &error)
-            } else {
-                // LOG: Not supposed to be in this state
-            }
-
-            HttpResponse::InternalServerError().finish()
-        }
-    };
-
-    Ok(response)
+    } else {
+        Err(AppError::new(Some(AppErrorType::OAuthStateError))
+            .extra_context("Twitch did not return data"))
+    }
 }

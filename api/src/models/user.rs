@@ -58,11 +58,11 @@ pub fn create_user(
     users::table.find(&uuid).get_result::<User>(db)
 }
 
-pub fn get_or_create_user(db: &SqliteConnection, user: &CreateUser) -> Result<User, diesel::result::Error> {
+pub fn get_or_create_user(db: &SqliteConnection, user: CreateUser) -> Result<User, diesel::result::Error> {
     let maybe_user = get_user_by_username(db, &user.username);
 
     match maybe_user {
         Ok(user) => Ok(user),
-        Err(_) => create_user(db, user),
+        Err(_) => create_user(db, &user),
     }
 }
