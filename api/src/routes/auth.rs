@@ -113,7 +113,8 @@ pub async fn get_twitch_access_token(
                     .extra_context("Cannot create/get new twitch user")
             })?;
 
-            let user_session = UserSession::new(&db_user, &tokens.access_token);
+            let user_session =
+                UserSession::new(&db_user, &tokens.access_token, &tokens.refresh_token);
 
             session.remove(&SessionKey::OAuthState.as_str());
             session
@@ -138,12 +139,21 @@ pub async fn get_twitch_access_token(
 }
 
 #[get("/logout")]
-pub async fn logout(session: Session) -> Result<HttpResponse, AppError> {
+pub async fn logout(
+    user: UserFromCookie,
+    session: Session,
+    app_config: web::Data<AppConfig>,
+) -> Result<HttpResponse, AppError> {
     session.remove(&SessionKey::User.as_str());
-    Ok(HttpResponse::NoContent().finish())
+    id_api::revoke_access_token(&app_config, &user.logged.access_token).await?;
+
+    Ok(HttpResponse::Found()
+        .append_header((header::LOCATION, format!("{}", &app_config.frontend_url)))
+        .finish())
 }
 
 #[get("/me")]
-pub async fn me(user: UserFromCookie) -> Result<HttpResponse, AppError> {
-    Ok(HttpResponse::Ok().json(user.logged))
+pub async fn me(_user: UserFromCookie) -> Result<HttpResponse, AppError> {
+    // Database User please
+    Ok(HttpResponse::Ok().json(""))
 }

@@ -1,20 +1,22 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::user::User;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserSession {
     pub id: String,
     pub username: String,
     pub access_token: String,
+    pub refresh_token: String,
 }
 
 impl UserSession {
-    pub fn new(db_user: &User, access_token: &str) -> Self {
+    pub fn new(db_user: &User, access_token: &str, refresh_token: &str) -> Self {
         Self {
             id: db_user.id.clone(),
             username: db_user.username.clone(),
             access_token: String::from(access_token),
+            refresh_token: String::from(refresh_token),
         }
     }
 }
