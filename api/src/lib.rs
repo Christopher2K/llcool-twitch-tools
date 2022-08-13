@@ -1,5 +1,6 @@
 pub mod enums;
 pub mod errors;
+pub mod extractors;
 pub mod middlewares;
 pub mod models;
 pub mod routes;

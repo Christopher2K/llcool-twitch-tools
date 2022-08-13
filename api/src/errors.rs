@@ -14,6 +14,7 @@ pub enum AppErrorType {
     TwitchApiError,
 
     OAuthStateError,
+    Unauthenticated,
 }
 
 #[derive(Debug, Display, Error, Clone)]
@@ -74,6 +75,7 @@ impl error::ResponseError for AppError {
             AppErrorType::TwitchApiError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::OAuthStateError => StatusCode::UNAUTHORIZED,
+            AppErrorType::Unauthenticated => StatusCode::UNAUTHORIZED,
         }
     }
 }

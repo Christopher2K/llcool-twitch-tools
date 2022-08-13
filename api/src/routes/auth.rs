@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
+use crate::extractors::UserFromCookie;
 use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
 use crate::states::app_config::AppConfig;
@@ -134,4 +135,15 @@ pub async fn get_twitch_access_token(
         Err(AppError::new(Some(AppErrorType::OAuthStateError))
             .extra_context("Twitch did not return data"))
     }
+}
+
+#[get("/logout")]
+pub async fn logout(session: Session) -> Result<HttpResponse, AppError> {
+    session.remove(&SessionKey::User.as_str());
+    Ok(HttpResponse::NoContent().finish())
+}
+
+#[get("/me")]
+pub async fn me(user: UserFromCookie) -> Result<HttpResponse, AppError> {
+    Ok(HttpResponse::Ok().json(user.logged))
 }

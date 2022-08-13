@@ -43,7 +43,9 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/auth")
                             .service(routes::auth::login_request_to_twitch)
-                            .service(routes::auth::get_twitch_access_token),
+                            .service(routes::auth::get_twitch_access_token)
+                            .service(routes::auth::logout)
+                            .service(routes::auth::me),
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
