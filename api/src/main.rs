@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
 use diesel::r2d2;
@@ -38,10 +39,18 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     HttpServer::new(move || {
+        // Cors
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .supports_credentials();
+
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .app_data(twitch_app_credentials.clone())
             .app_data(app_config.clone())
+            .wrap(cors)
             .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
