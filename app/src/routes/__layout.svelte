@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { apiUrl } from '@app/env'
-  const loginToTwitchUrl = `${apiUrl}/auth/login`
+  import { LOGIN_URL, LOGOUT_URL } from '@app/api'
+  import { userIsLogged, authIsLoading } from '@app/stores'
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">
@@ -11,9 +11,13 @@
     </div>
     <div class="navbar-end">
       <div class="navbar-item">
-        <a class="button is-primary" href={loginToTwitchUrl}>
-          Log in with Twitch
-        </a>
+        {#if $authIsLoading}
+          Loading...
+        {:else if $userIsLogged}
+          <a class="button is-primary" href={LOGOUT_URL}>Logout</a>
+        {:else}
+          <a class="button is-primary" href={LOGIN_URL}>Log in with Twitch</a>
+        {/if}
       </div>
     </div>
   </div>
