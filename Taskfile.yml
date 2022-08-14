@@ -3,6 +3,9 @@ version: 3
 tasks:
   init:
     cmds:
+      - cargo install diesel_cli
+      - touch api/local.db.sqlite3
+      - mkcert localhost
       - cd app && pnpm i
       - cd api && cargo build
   dev:back:

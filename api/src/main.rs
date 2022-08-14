@@ -3,6 +3,7 @@ use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
 use diesel::r2d2;
 use diesel::sqlite::SqliteConnection;
 use dotenvy::dotenv;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use api::{middlewares, routes, states};
 
@@ -27,6 +28,15 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool");
 
+    // SSL config
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
+        .unwrap();
+    builder
+        .set_certificate_chain_file("../localhost.pem")
+        .unwrap();
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
@@ -50,7 +60,7 @@ async fn main() -> std::io::Result<()> {
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind_openssl("localhost:8080", builder)?
     .run()
     .await
 }
