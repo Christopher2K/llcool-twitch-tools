@@ -18,5 +18,5 @@ tasks:
     env:
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     cmds:
-      - cd app && pnpm run dev --https
+      - cd app && pnpm run dev
 

@@ -8,7 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "lib": ["es2020", "DOM"],
     "moduleResolution": "node",
-    "module": "es2020",
+    "module": "es2022",
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
