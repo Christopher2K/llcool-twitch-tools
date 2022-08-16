@@ -1,6 +1,8 @@
 <script lang="ts">
   import { LOGIN_URL, LOGOUT_URL } from '@app/api'
   import { userIsLogged, authIsLoading } from '@app/stores'
+
+  export let data: unknown = null
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">
