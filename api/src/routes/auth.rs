@@ -145,7 +145,8 @@ pub async fn logout(
     app_config: web::Data<AppConfig>,
 ) -> Result<HttpResponse, AppError> {
     session.remove(&SessionKey::User.as_str());
-    id_api::revoke_access_token(&app_config, &user.logged.access_token).await?;
+    id_api::revoke_token(&app_config, &user.session.access_token).await?;
+    id_api::revoke_token(&app_config, &user.session.refresh_token).await?;
 
     Ok(HttpResponse::Found()
         .append_header((header::LOCATION, format!("{}", &app_config.frontend_url)))
@@ -153,7 +154,6 @@ pub async fn logout(
 }
 
 #[get("/me")]
-pub async fn me(_user: UserFromCookie) -> Result<HttpResponse, AppError> {
-    // TODO: Database User please
-    Ok(HttpResponse::Ok().json(_user.logged))
+pub async fn me(user: UserFromCookie) -> Result<HttpResponse, AppError> {
+    Ok(HttpResponse::Ok().json(user.logged))
 }

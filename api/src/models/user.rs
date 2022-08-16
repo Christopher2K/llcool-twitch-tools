@@ -1,9 +1,10 @@
-use diesel::{expression::SqlLiteral, prelude::*};
+use diesel::prelude::*;
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::schema::users;
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct User {
     pub id: String,
     pub username: String,

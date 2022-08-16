@@ -135,16 +135,16 @@ pub async fn renew_token(
         .await
 }
 
-pub async fn revoke_access_token(
+pub async fn revoke_token(
     app_config: &AppConfig,
-    access_token: &str,
+    token: &str,
 ) -> Result<reqwest::Response, AppError> {
     let url = format!("{}/oauth2/revoke", ID_TWITCH_URL);
     let client = reqwest::Client::new();
 
     let form = [
         ("client_id", app_config.client_id.clone()),
-        ("token", access_token.to_string()),
+        ("token", token.to_string()),
     ];
 
     client
