@@ -128,7 +128,7 @@ pub async fn get_twitch_access_token(
             Ok(HttpResponse::Found()
                 .append_header((
                     header::LOCATION,
-                    format!("{}/app", &app_config.frontend_url),
+                    format!("{}", &app_config.frontend_url),
                 ))
                 .finish())
         }
@@ -154,6 +154,6 @@ pub async fn logout(
 
 #[get("/me")]
 pub async fn me(_user: UserFromCookie) -> Result<HttpResponse, AppError> {
-    // Database User please
-    Ok(HttpResponse::Ok().json(""))
+    // TODO: Database User please
+    Ok(HttpResponse::Ok().json(_user.logged))
 }
