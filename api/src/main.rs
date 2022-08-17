@@ -6,7 +6,7 @@ use diesel::sqlite::SqliteConnection;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
-use api::{middlewares, routes, states};
+use api::{routes, states};
 
 use std::{env, sync::RwLock};
 
@@ -56,7 +56,6 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 cookie_key.clone(),
             ))
-            .wrap(middlewares::twitch_client_credentials::TwitchClientCredentialsMiddlewareFactory)
             .service(
                 web::scope("/api")
                     .service(

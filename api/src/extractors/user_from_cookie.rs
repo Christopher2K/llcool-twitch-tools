@@ -1,8 +1,7 @@
 use actix_session::SessionExt;
-use actix_web::{web, HttpRequest};
+use actix_web::{FromRequest, web, HttpRequest};
 use std::pin::Pin;
 
-use actix_web::FromRequest;
 use futures::Future;
 
 use crate::{

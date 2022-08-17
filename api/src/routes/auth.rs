@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
-use crate::extractors::UserFromCookie;
+use crate::extractors::user_from_cookie::UserFromCookie;
 use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
 use crate::states::app_config::AppConfig;
@@ -126,10 +126,7 @@ pub async fn get_twitch_access_token(
                 })?;
 
             Ok(HttpResponse::Found()
-                .append_header((
-                    header::LOCATION,
-                    format!("{}", &app_config.frontend_url),
-                ))
+                .append_header((header::LOCATION, format!("{}", &app_config.frontend_url)))
                 .finish())
         }
     } else {
@@ -154,6 +151,8 @@ pub async fn logout(
 }
 
 #[get("/me")]
-pub async fn me(user: UserFromCookie) -> Result<HttpResponse, AppError> {
+pub async fn me(
+    user: UserFromCookie
+) -> Result<HttpResponse, AppError> {
     Ok(HttpResponse::Ok().json(user.logged))
 }

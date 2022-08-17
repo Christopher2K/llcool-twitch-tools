@@ -10,6 +10,7 @@ use serde::Serialize;
 pub enum AppErrorType {
     InternalError,
     DatabaseError,
+    AppStateError,
 
     TwitchApiError,
 
@@ -71,11 +72,9 @@ impl error::ResponseError for AppError {
 
     fn status_code(&self) -> reqwest::StatusCode {
         match self.error_type {
-            AppErrorType::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            AppErrorType::TwitchApiError => StatusCode::INTERNAL_SERVER_ERROR,
-            AppErrorType::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::OAuthStateError => StatusCode::UNAUTHORIZED,
             AppErrorType::Unauthenticated => StatusCode::UNAUTHORIZED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
