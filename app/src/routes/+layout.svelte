@@ -1,8 +1,9 @@
 <script lang="ts">
+  import type { LayoutData } from './$types'
   import { LOGIN_URL, LOGOUT_URL } from '@app/api'
-  import { userIsLogged, authIsLoading } from '@app/stores'
 
-  export let data: unknown = null
+  export let data: LayoutData
+  const { user } = data
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">
@@ -13,9 +14,7 @@
     </div>
     <div class="navbar-end">
       <div class="navbar-item">
-        {#if $authIsLoading}
-          Loading...
-        {:else if $userIsLogged}
+        {#if user}
           <a class="button is-primary" href={LOGOUT_URL}>Logout</a>
         {:else}
           <a class="button is-primary" href={LOGIN_URL}>Log in with Twitch</a>

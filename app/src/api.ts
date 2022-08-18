@@ -14,11 +14,17 @@ const userApiValidator = z.object({
 
 export type UserApi = z.infer<typeof userApiValidator>
 
-export async function getUserData(): Promise<UserApi> {
-  // if (!browser) return undefined
-  const response = await fetch(`${apiUrl}/auth/me`, {
-    credentials: 'include',
-  })
+export async function getUserData(
+  cookie: string | undefined = undefined,
+): Promise<UserApi> {
+  const response = await fetch(
+    `${apiUrl}/auth/me`,
+    cookie == null
+      ? {
+          credentials: 'include',
+        }
+      : { headers: { cookie } },
+  )
 
   if (response.ok) {
     const json = await response.json()
