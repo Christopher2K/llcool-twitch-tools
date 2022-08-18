@@ -1,12 +1,13 @@
 import { readable, derived } from 'svelte/store'
 
 import { ErrorType } from '@app/error'
+import { type User, getUserFromApiObject } from '@app/models'
 import { getUserData } from '@app/api'
 
-export const user = readable(undefined, set => {
+export const user = readable<User | null | undefined>(undefined, set => {
   getUserData()
     .then(userData => {
-      set(userData)
+      set(getUserFromApiObject(userData))
     })
     .catch(error => {
       if (error?.message === ErrorType.Unauthorized) {
