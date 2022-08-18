@@ -1,19 +1,46 @@
 version: 3
 
+env:
+  DB_FOLDER: "{{.HOME}}/.config/llcooltwitchtools"
+  DB_NAME: local.db.sqlite3
+  DATABASE_URL: "{{.DB_FOLDER}}/{{.DB_NAME}}"
+
 tasks:
-  init:
+  init:db:
     cmds:
       - cargo install diesel_cli
-      - touch api/local.db.sqlite3
+      - mkdir -p {{.DB_FOLDER}}
+      - touch {{.DB_FOLDER}}/{{.DB_NAME}}
+
+  init:cert:
+    cmds:
       - mkcert localhost
+
+  init:apps:
+    cmds:
       - cd app && pnpm i
-      - cd api && cargo build
+      - cd app && cargo build
+
+  init:
+    cmds:
+      - task: init:db
+      - task: init:cert
+      - task: init:apps
+
+  migrate:
+    env:
+      RUST_BACKTRACE: 1
+    cmds:
+      - echo Migrating on {{.DATABASE_URL}}
+      - cd api && diesel migration run
+
   dev:back:
     env:
       RUST_BACKTRACE: 1
       RUST_LOG: actix_web=info
     cmds:
       - cd api && cargo watch -x 'run --bin api'
+
   dev:front:
     env:
       NODE_TLS_REJECT_UNAUTHORIZED: 0

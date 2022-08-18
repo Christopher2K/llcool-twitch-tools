@@ -50,6 +50,7 @@ impl AppError {
 
 
     pub fn inner_error(self, inner_error: &str) -> Self {
+        println!("{}", inner_error);
         Self {
             extra_context: Some(inner_error.to_string()),
             ..self

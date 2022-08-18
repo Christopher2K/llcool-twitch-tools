@@ -151,8 +151,6 @@ pub async fn logout(
 }
 
 #[get("/me")]
-pub async fn me(
-    user: UserFromCookie
-) -> Result<HttpResponse, AppError> {
+pub async fn me(user: UserFromCookie) -> Result<HttpResponse, AppError> {
     Ok(HttpResponse::Ok().json(user.logged))
 }

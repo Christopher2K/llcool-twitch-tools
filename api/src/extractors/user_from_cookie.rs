@@ -1,5 +1,5 @@
 use actix_session::SessionExt;
-use actix_web::{FromRequest, web, HttpRequest};
+use actix_web::{web, FromRequest, HttpRequest};
 use std::pin::Pin;
 
 use futures::Future;
@@ -13,6 +13,8 @@ use crate::{
     twitch::id_api,
     types::DbPool,
 };
+
+const LOG_TARGET: &'static str = "actix_web::extractors::user_from_cookie";
 
 pub struct UserFromCookie {
     pub session: UserSession,
@@ -31,6 +33,8 @@ impl FromRequest for UserFromCookie {
         let request = req.clone();
 
         Box::pin(async move {
+            log::info!(target: LOG_TARGET, "Getting user info...");
+
             let session = request.get_session();
             let app_config = request
                 .app_data::<web::Data<AppConfig>>()
@@ -55,22 +59,37 @@ impl FromRequest for UserFromCookie {
 
             match mb_user_session {
                 Some(user_session) => {
+                    log::info!(target: LOG_TARGET, "Checking user validity...");
+
                     let is_valid = id_api::validate_user_token(&user_session.access_token)
                         .await
                         .map_err(|e| authentication_error.clone().inner_error(&e.to_string()))?;
 
+                    log::info!(target: LOG_TARGET, "Getting db user...");
+
+                    let user_session_clone = user_session.clone();
+
                     let db_user =
-                        get_user_by_username(&db, &user_session.username).map_err(|e| {
+                        get_user_by_username(&db, &user_session_clone.username).map_err(|e| {
+                            session.remove(&SessionKey::User.as_str());
                             AppError::new(Some(AppErrorType::DatabaseError))
+                                .inner_error(&e.to_string())
                                 .extra_context("Cannot get user db record")
                         })?;
 
                     if is_valid {
+                        log::info!(target: LOG_TARGET, "User is valid, proceed...");
+
                         Ok(Self {
                             session: user_session,
                             logged: db_user,
                         })
                     } else {
+                        log::info!(
+                            target: LOG_TARGET,
+                            "User is invalid, renew token attempt..."
+                        );
+
                         let new_user_data =
                             id_api::renew_token(&app_config, &user_session.refresh_token).await?;
                         let new_user_session = UserSession {
@@ -88,6 +107,7 @@ impl FromRequest for UserFromCookie {
                                     .extra_context("Cannot write new user into the session")
                             })?;
 
+                        log::info!(target: LOG_TARGET, "Token renew success, proceed...");
                         Ok(Self {
                             session: new_user_session,
                             logged: db_user,
