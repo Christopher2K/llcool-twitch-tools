@@ -2,8 +2,15 @@
   import type { LayoutData } from './$types'
   import { LOGIN_URL, LOGOUT_URL } from '@app/api'
 
+  // Props
   export let data: LayoutData
-  const { user } = data
+
+  // Variables
+  const { user, isBot } = data
+  const logged = user != null
+  const loggedUserName = logged
+    ? `${isBot ? '[BOT]' : ''} ${user.username}`
+    : undefined
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">
@@ -13,6 +20,12 @@
       <a class="navbar-item" href="/">Home</a>
     </div>
     <div class="navbar-end">
+      {#if loggedUserName}
+        <div class="navbar-item">
+          <p>{loggedUserName}</p>
+          <p />
+        </div>
+      {/if}
       <div class="navbar-item">
         {#if user}
           <a class="button is-primary" href={LOGOUT_URL}>Logout</a>

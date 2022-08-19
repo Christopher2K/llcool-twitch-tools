@@ -4,7 +4,8 @@
 // for information about these interfaces
 declare namespace App {
   interface Locals {
-    user?: import('@app/models').User
+    user?: import('@app/models').User,
+    isBotUser?: boolean
   }
   // interface Platform {}
   // interface Session {}
