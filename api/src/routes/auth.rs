@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::user_from_cookie::UserFromCookie;
+use crate::models::bot_credentials::{get_or_create_bot_credentials, CreateBotCredentials};
 use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
 use crate::states::app_config::AppConfig;
@@ -103,7 +104,7 @@ pub async fn get_twitch_access_token(
             let db_user = get_or_create_user(
                 &db,
                 CreateUser {
-                    username: user_profile.login,
+                    username: user_profile.login.clone(),
                     twitch_id: user_profile.id,
                 },
             )
@@ -112,6 +113,22 @@ pub async fn get_twitch_access_token(
                     .inner_error(&err.to_string())
                     .extra_context("Cannot create/get new twitch user")
             })?;
+
+            if user_profile.login == app_config.chat_bot_username {
+                get_or_create_bot_credentials(
+                    &db,
+                    CreateBotCredentials {
+                        access_token: tokens.access_token.clone(),
+                        refresh_token: tokens.refresh_token.clone(),
+                        user_id: db_user.id.clone(),
+                    },
+                )
+                .map_err(|err| {
+                    AppError::new(Some(AppErrorType::DatabaseError))
+                        .inner_error(&err.to_string())
+                        .extra_context("Cannot create/get twitch bot credentials")
+                })?;
+            }
 
             let user_session =
                 UserSession::new(&db_user, &tokens.access_token, &tokens.refresh_token);

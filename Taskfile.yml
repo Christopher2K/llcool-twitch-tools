@@ -27,12 +27,12 @@ tasks:
       - task: init:cert
       - task: init:apps
 
-  migrate:
+  diesel:
     env:
       RUST_BACKTRACE: 1
     cmds:
-      - echo Migrating on {{.DATABASE_URL}}
-      - cd api && diesel migration run
+      - echo Using DB at {{.DATABASE_URL}}
+      - cd api && diesel {{.CLI_ARGS}}
 
   dev:back:
     env:
