@@ -19,7 +19,7 @@ export async function getUserData(
 ): Promise<UserApi> {
   const response = await fetch(
     `${apiUrl}/auth/me`,
-    cookie == null
+    cookie ==null 
       ? {
           credentials: 'include',
         }

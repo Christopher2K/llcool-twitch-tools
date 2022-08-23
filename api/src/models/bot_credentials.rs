@@ -6,7 +6,7 @@ use crate::schema::bot_credentials;
 
 type QueryError = diesel::result::Error;
 
-#[derive(Queryable, Serialize)]
+#[derive(Queryable, Serialize, Debug)]
 pub struct BotCredentials {
     pub id: String,
     pub access_token: String,
@@ -27,6 +27,23 @@ pub struct CreateBotCredentials {
     pub access_token: String,
     pub refresh_token: String,
     pub user_id: String,
+}
+
+#[derive(AsChangeset)]
+#[table_name = "bot_credentials"]
+pub struct UpdateBotCredentials<'a> {
+    pub access_token: &'a str,
+    pub refresh_token: &'a str,
+}
+
+pub fn update_bot_credentials(
+    db: &SqliteConnection,
+    id: &str,
+    update_data: UpdateBotCredentials,
+) -> Result<usize, QueryError> {
+    diesel::update(bot_credentials::table.find(id))
+        .set(&update_data)
+        .execute(db)
 }
 
 pub fn create_bot_credentials(

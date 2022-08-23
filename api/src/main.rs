@@ -6,7 +6,7 @@ use diesel::sqlite::SqliteConnection;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
-use api::{routes, states};
+use api::{bot, routes, states};
 
 use std::{env, sync::RwLock};
 
@@ -28,6 +28,13 @@ async fn main() -> std::io::Result<()> {
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool");
+    let shared_pool = web::Data::new(pool);
+
+    // Twitch bot
+    let mut twitch_bot = bot::Bot::new(shared_pool.clone(), app_config.chat_bot_username.clone());
+    twitch_bot.connect().await;
+
+    let shared_twitch_bot = web::Data::new(twitch_bot);
 
     // SSL config
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
@@ -47,9 +54,10 @@ async fn main() -> std::io::Result<()> {
             .supports_credentials();
 
         App::new()
-            .app_data(web::Data::new(pool.clone()))
+            .app_data(shared_pool.clone())
             .app_data(twitch_app_credentials.clone())
             .app_data(app_config.clone())
+            .app_data(shared_twitch_bot.clone())
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(SessionMiddleware::new(
@@ -64,6 +72,11 @@ async fn main() -> std::io::Result<()> {
                             .service(routes::auth::get_twitch_access_token)
                             .service(routes::auth::logout)
                             .service(routes::auth::me),
+                    )
+                    .service(
+                        web::scope("/bot")
+                            .service(routes::bot::join_chat)
+                            .service(routes::bot::leave_chat),
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )

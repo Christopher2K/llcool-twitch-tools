@@ -1,3 +1,4 @@
+pub mod bot;
 pub mod enums;
 pub mod errors;
 pub mod extractors;

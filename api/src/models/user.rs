@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::schema::users;
 
-#[derive(Queryable, Serialize)]
+#[derive(Queryable, Serialize, Debug)]
 pub struct User {
     pub id: String,
     pub username: String,

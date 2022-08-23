@@ -6,7 +6,10 @@ use serde::Deserialize;
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::user_from_cookie::UserFromCookie;
-use crate::models::bot_credentials::{get_or_create_bot_credentials, CreateBotCredentials};
+use crate::models::bot_credentials::{
+    get_or_create_bot_credentials, update_bot_credentials, CreateBotCredentials,
+    UpdateBotCredentials,
+};
 use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
 use crate::states::app_config::AppConfig;
@@ -123,6 +126,16 @@ pub async fn get_twitch_access_token(
                         user_id: db_user.id.clone(),
                     },
                 )
+                .and_then(|credentials| {
+                    update_bot_credentials(
+                        &db,
+                        &credentials.id,
+                        UpdateBotCredentials {
+                            access_token: &tokens.access_token,
+                            refresh_token: &tokens.refresh_token,
+                        },
+                    )
+                })
                 .map_err(|err| {
                     AppError::new(Some(AppErrorType::DatabaseError))
                         .inner_error(&err.to_string())
@@ -159,8 +172,11 @@ pub async fn logout(
     app_config: web::Data<AppConfig>,
 ) -> Result<HttpResponse, AppError> {
     session.remove(&SessionKey::User.as_str());
-    id_api::revoke_token(&app_config, &user.session.access_token).await?;
-    id_api::revoke_token(&app_config, &user.session.refresh_token).await?;
+
+    if user.logged.username != app_config.chat_bot_username {
+        id_api::revoke_token(&app_config, &user.session.access_token).await?;
+        id_api::revoke_token(&app_config, &user.session.refresh_token).await?;
+    }
 
     Ok(HttpResponse::Found()
         .append_header((header::LOCATION, format!("{}", &app_config.frontend_url)))

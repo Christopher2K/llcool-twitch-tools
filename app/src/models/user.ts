@@ -10,6 +10,6 @@ export function getUserFromApiObject(user: UserApi): User {
   return {
     id: user.id,
     username: user.username,
-    twitchId: user.twitch_id
+    twitchId: user.twitch_id,
   }
 }
