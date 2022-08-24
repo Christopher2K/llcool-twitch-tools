@@ -11,13 +11,27 @@ pub async fn join_chat(
 ) -> Result<HttpResponse, AppError> {
     if let BotStatus::Connected(sender) = &bot.status {
         let sender = sender.clone();
-        sender.send(BotMessage::HelloWorld).await;
+        sender
+            .send(BotMessage::JoinChat(user.logged.username.clone()))
+            .await
+            .unwrap();
     }
 
     Ok(HttpResponse::Ok().finish())
 }
 
 #[get("/leave")]
-pub async fn leave_chat() -> Result<HttpResponse, AppError> {
+pub async fn leave_chat(
+    user: UserFromCookie,
+    bot: web::Data<Bot>,
+) -> Result<HttpResponse, AppError> {
+    if let BotStatus::Connected(sender) = &bot.status {
+        let sender = sender.clone();
+        sender
+            .send(BotMessage::LeaveChat(user.logged.username.clone()))
+            .await
+            .unwrap();
+    }
+
     Ok(HttpResponse::Ok().finish())
 }

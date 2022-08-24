@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use actix_web::web::Data;
 use futures::{SinkExt, StreamExt, TryStreamExt};
 use reqwest::Url;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{connect_async, tungstenite::protocol, MaybeTlsStream, WebSocketStream};
 
 use crate::models::bot_credentials::get_bot_credentials_by_user_id;
@@ -13,8 +15,33 @@ const WEBSOCKET_CLIENT_URL: &'static str = "wss://irc-ws.chat.twitch.tv:443";
 type Sender = mpsc::Sender<BotMessage>;
 
 #[derive(Debug)]
+pub enum TwitchMessage {
+    RplWelcome,
+    Unknown(String),
+}
+
+impl FromStr for TwitchMessage {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let items = s.split(" ").collect::<Vec<&str>>();
+
+        if let Some(code) = items.get(1) {
+            let parsed_code = match *code {
+                "001" => Self::RplWelcome,
+                _ => Self::Unknown(String::from(s)),
+            };
+            Ok(parsed_code)
+        } else {
+            Ok(Self::Unknown(String::from(s)))
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum BotMessage {
-    HelloWorld,
+    JoinChat(String),
+    LeaveChat(String),
 }
 
 pub enum BotStatus {
@@ -48,9 +75,11 @@ impl Bot {
                 .access_token
         };
 
-        // OPEN APP COMMUNICATION CHANNEL
+        // OPEN APP COMMUNICATION CHANNELS
         let channels = mpsc::channel::<BotMessage>(32);
         let (tx, mut rx) = channels;
+
+        let (tx_status, mut rx_status) = mpsc::channel::<()>(10);
 
         // OPEN TWITCH TMI CONNECTION
         let url = Url::parse(WEBSOCKET_CLIENT_URL).unwrap();
@@ -79,38 +108,50 @@ impl Bot {
             .await
             .unwrap();
 
-        tokio::spawn(async move {
-            read.for_each(|message| async {
-                let data = message.unwrap();
-                println!("{}", &data);
+        let _socket_reader = tokio::spawn(async move {
+            read.for_each(|data| async {
+                let msg = data.unwrap();
+                if let protocol::Message::Text(text) = msg {
+                    match TwitchMessage::from_str(&text).unwrap() {
+                        TwitchMessage::RplWelcome => {
+                            println!("Bot authenticated...");
+                            tx_status.send(()).await.unwrap();
+                        }
+                        _ => println!("{:?}", text),
+                    }
+                }
             })
             .await;
         });
 
-        // let connected_status = BotStatus::Connected(tx.clone());
+        let _http_handler_msg_reader = tokio::spawn(async move {
+            while let Some(message) = rx.recv().await {
+                match message {
+                    BotMessage::JoinChat(channel) => {
+                        println!("BOT JOIN CHANNEL {}", &channel);
 
-        // let handlers_receivers_task = tokio::spawn(async move {
-        //     let (mut write, read) = ws_stream.split();
-        //
-        //     while let Some(message) = rx.recv().await {
-        //         println!("Message: {:?}", &message);
-        //     }
-        // });
+                        write
+                            .send(protocol::Message::Text(
+                                format!("JOIN #{}", &channel).to_string(),
+                            ))
+                            .await
+                            .unwrap();
+                    }
+                    BotMessage::LeaveChat(channel) => {
+                        println!("BOT LEAVE CHANNEL {}", &channel);
+                        write
+                            .send(protocol::Message::Text(
+                                format!("PART #{}", &channel).to_string(),
+                            ))
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
+        });
 
-        // write.send(protocol::Message::Text(format!("PASS "))).await.expect("Cannot send PASS");
-        // write
-        //     .send(protocol::Message::Text("NICK llcoolbot_".to_string()))
-        //     .await
-        //     .expect("Cannot send NICK");
-        //
-        // read.for_each(|message| async {
-        //     let data = message.unwrap();
-        //     println!("{}", data);
-        // })
-        // .await;
+        if let Some(_) = rx_status.recv().await {
+            self.status = BotStatus::Connected(tx.clone())
+        }
     }
-
-    pub async fn join_chat() {}
-
-    pub async fn disconnect_from_chat(&self) -> () {}
 }
