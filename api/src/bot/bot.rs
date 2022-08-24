@@ -7,8 +7,12 @@ use tokio_tungstenite::{connect_async, tungstenite::protocol};
 
 use crate::bot::types::{BotMessage, TwitchMessage};
 use crate::errors::{AppError, AppErrorType};
-use crate::models::bot_credentials::get_bot_credentials_by_user_id;
+use crate::models::bot_credentials::{
+    get_bot_credentials_by_user_id, update_bot_credentials, UpdateBotCredentials,
+};
 use crate::models::user::get_user_by_username;
+use crate::states::app_config::AppConfig;
+use crate::twitch::id_api::renew_token;
 use crate::types::DbPool;
 
 const LOG_TARGET: &'static str = "twitch_bot";
@@ -23,16 +27,16 @@ pub enum BotStatus {
 }
 
 pub struct Bot {
-    bot_name: String,
+    app_config: Data<AppConfig>,
     pool: Data<DbPool>,
 
     bot_status: BotStatus,
 }
 
 impl Bot {
-    pub fn new(pool: Data<DbPool>, bot_name: String) -> Self {
+    pub fn new(pool: Data<DbPool>, app_config: Data<AppConfig>) -> Self {
         Self {
-            bot_name,
+            app_config,
             pool,
             bot_status: BotStatus::Disconnected,
         }
@@ -43,20 +47,37 @@ impl Bot {
     }
 
     pub async fn connect(&mut self) -> Result<(), AppError> {
-        let bot_username = self.bot_name.clone();
+        let bot_username = self.app_config.chat_bot_username.clone();
 
         // GET BOT AUTHENTIFCATION
         let bot_access_token = {
+            log::info!(
+                target: LOG_TARGET,
+                "Getting and refreshing bot credentials..."
+            );
             let db = self.pool.get().map_err(|e| {
                 AppError::from(AppErrorType::InternalError).inner_error(&e.to_string())
             })?;
 
             let db_error = AppError::from(AppErrorType::DatabaseError);
 
-            get_user_by_username(&db, &self.bot_name)
+            // RENEW BY DEFAULT THE TWITCH BOT TOKEN
+            let credentials = get_user_by_username(&db, &bot_username)
                 .and_then(|user| get_bot_credentials_by_user_id(&db, &user.id))
-                .map_err(|e| db_error.clone().inner_error(&e.to_string()))?
-                .access_token
+                .map_err(|e| db_error.clone().inner_error(&e.to_string()))?;
+
+            let tokens = renew_token(&self.app_config, &credentials.refresh_token).await?;
+            update_bot_credentials(
+                &db,
+                &credentials.id,
+                UpdateBotCredentials {
+                    access_token: &tokens.access_token.clone(),
+                    refresh_token: &tokens.refresh_token.clone(),
+                },
+            )
+            .map_err(|e| db_error.clone().inner_error(&e.to_string()))?;
+
+            tokens.access_token
         };
 
         // OPEN APP COMMUNICATION CHANNELS
