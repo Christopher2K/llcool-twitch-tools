@@ -11,6 +11,7 @@ pub enum AppErrorType {
     InternalError,
     DatabaseError,
     AppStateError,
+    WebSocketError,
 
     TwitchApiError,
 
@@ -41,13 +42,20 @@ impl AppError {
         }
     }
 
+    pub fn from(error_type: AppErrorType) -> Self {
+        Self {
+            error_type,
+            extra_context: None,
+            inner_error: None,
+        }
+    }
+
     pub fn extra_context(self, extra_content: &str) -> Self {
         Self {
             extra_context: Some(extra_content.to_string()),
             ..self
         }
     }
-
 
     pub fn inner_error(self, inner_error: &str) -> Self {
         println!("{}", inner_error);
@@ -79,4 +87,3 @@ impl error::ResponseError for AppError {
         }
     }
 }
-

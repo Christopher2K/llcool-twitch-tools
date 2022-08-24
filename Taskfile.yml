@@ -36,7 +36,7 @@ tasks:
 
   dev:back:
     env:
-      RUST_LOG: actix_web=info
+      RUST_LOG: actix_web=error,actix_web=info,twitch_bot
     cmds:
       - cd api && cargo watch -x 'run --bin api'
 
