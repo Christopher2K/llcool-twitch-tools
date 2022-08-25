@@ -76,7 +76,8 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/bot")
                             .service(routes::bot::join_chat)
-                            .service(routes::bot::leave_chat),
+                            .service(routes::bot::leave_chat)
+                            .service(routes::bot::get_bot_info),
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )

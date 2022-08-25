@@ -37,3 +37,9 @@ pub enum BotMessage {
     LeaveChat(String),
     Pong,
 }
+
+#[derive(Debug)]
+pub enum ConnectedChannelsSetMessage {
+    Join(String),
+    Leave(String),
+}

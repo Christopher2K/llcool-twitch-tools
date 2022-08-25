@@ -1,11 +1,13 @@
 use actix_web::web::Data;
 use futures::{SinkExt, StreamExt};
 use reqwest::Url;
+use std::collections::HashSet;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol};
 
-use crate::bot::types::{BotMessage, TwitchMessage};
+use crate::bot::types::{BotMessage, ConnectedChannelsSetMessage, TwitchMessage};
 use crate::errors::{AppError, AppErrorType};
 use crate::models::bot_credentials::{
     get_bot_credentials_by_user_id, update_bot_credentials, UpdateBotCredentials,
@@ -19,6 +21,7 @@ const LOG_TARGET: &'static str = "twitch_bot";
 const WEBSOCKET_CLIENT_URL: &'static str = "wss://irc-ws.chat.twitch.tv:443";
 
 type Sender = mpsc::Sender<BotMessage>;
+type ChannelSet = Arc<Mutex<HashSet<String>>>;
 
 #[derive(Clone)]
 pub enum BotStatus {
@@ -29,8 +32,8 @@ pub enum BotStatus {
 pub struct Bot {
     app_config: Data<AppConfig>,
     pool: Data<DbPool>,
-
     bot_status: BotStatus,
+    pub connected_channels: ChannelSet,
 }
 
 impl Bot {
@@ -39,6 +42,7 @@ impl Bot {
             app_config,
             pool,
             bot_status: BotStatus::Disconnected,
+            connected_channels: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
@@ -83,6 +87,7 @@ impl Bot {
         // OPEN APP COMMUNICATION CHANNELS
         let (tx, mut rx) = mpsc::channel::<BotMessage>(32);
         let (tx_status, mut rx_status) = mpsc::channel::<()>(10);
+        let (tx_channel_set, mut rx_channel_set) = mpsc::channel::<ConnectedChannelsSetMessage>(10);
 
         // OPEN TWITCH TMI CONNECTION
         let ws_error = AppError::from(AppErrorType::WebSocketError);
@@ -166,35 +171,70 @@ impl Bot {
                 let result = match message {
                     BotMessage::JoinChat(channel) => {
                         log::info!(target: LOG_TARGET, "Bot joined channel #{}", channel);
-
                         write
                             .send(protocol::Message::Text(
                                 format!("JOIN #{}", &channel).to_string(),
                             ))
+                            .await;
+
+                        tx_channel_set
+                            .send(ConnectedChannelsSetMessage::Join(channel.clone()))
                             .await
+                            .unwrap();
                     }
                     BotMessage::LeaveChat(channel) => {
                         log::info!(target: LOG_TARGET, "Bot left channel #{}", channel);
-
                         write
                             .send(protocol::Message::Text(
                                 format!("PART #{}", &channel).to_string(),
                             ))
+                            .await;
+
+                        tx_channel_set
+                            .send(ConnectedChannelsSetMessage::Leave(channel.clone()))
                             .await
+                            .unwrap();
                     }
                     BotMessage::Pong => {
                         log::info!(target: LOG_TARGET, "Respond to PING message");
 
                         write
                             .send(protocol::Message::Text("PONG".to_string()))
-                            .await
+                            .await;
                     }
                 };
+                //
+                // if let Err(err) = result {
+                //     let e = socket_error.clone().inner_error(&err.to_string());
+                //     log::error!(target: LOG_TARGET, "Error when sending a message {}", e);
+                // };
+            }
+        });
 
-                if let Err(err) = result {
-                    let e = socket_error.clone().inner_error(&err.to_string());
-                    log::error!(target: LOG_TARGET, "Error when sending a message {}", e);
-                };
+        let connected_channels = self.connected_channels.clone();
+        let _hash_set_manager = tokio::spawn(async move {
+            while let Some(msg) = rx_channel_set.recv().await {
+                {
+                    let lock = connected_channels.lock();
+
+                    match lock {
+                        Ok(mut connected_channels) => match msg {
+                            ConnectedChannelsSetMessage::Join(channel) => {
+                                connected_channels.insert(channel);
+                            }
+                            ConnectedChannelsSetMessage::Leave(channel) => {
+                                connected_channels.insert(channel);
+                            }
+                        },
+                        Err(err) => {
+                            log::error!(
+                                target: LOG_TARGET,
+                                "Error when getting the hashset connected_channels {}",
+                                err
+                            );
+                        }
+                    };
+                }
             }
         });
 
