@@ -3,6 +3,7 @@ use std::str::FromStr;
 #[derive(Debug)]
 pub enum TwitchMessage {
     RplWelcome,
+    Ping,
     Unknown(String),
 }
 
@@ -10,7 +11,13 @@ impl FromStr for TwitchMessage {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let items = s.split(" ").collect::<Vec<&str>>();
+        let items: Vec<&str> = s.split(" ").collect::<_>();
+
+        if let Some(ping) = items.get(0) {
+            if ping == &"PING" {
+                return Ok(Self::Ping);
+            }
+        };
 
         if let Some(code) = items.get(1) {
             let parsed_code = match *code {
@@ -28,4 +35,5 @@ impl FromStr for TwitchMessage {
 pub enum BotMessage {
     JoinChat(String),
     LeaveChat(String),
+    Pong,
 }

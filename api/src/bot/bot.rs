@@ -119,6 +119,8 @@ impl Bot {
             .await
             .map_err(|e| ws_error.clone().inner_error(&e.to_string()))?;
 
+        let tx_pong = tx.clone();
+
         let _socket_reader = tokio::spawn(async move {
             read.for_each(|data| async {
                 match data {
@@ -132,6 +134,10 @@ impl Bot {
                                         &bot_username
                                     );
                                     tx_status.send(()).await.unwrap();
+                                }
+                                TwitchMessage::Ping => {
+                                    log::info!(target: LOG_TARGET, "PING received",);
+                                    tx_pong.send(BotMessage::Pong).await.unwrap();
                                 }
                                 _ => log::info!(
                                     target: LOG_TARGET,
@@ -174,6 +180,13 @@ impl Bot {
                             .send(protocol::Message::Text(
                                 format!("PART #{}", &channel).to_string(),
                             ))
+                            .await
+                    }
+                    BotMessage::Pong => {
+                        log::info!(target: LOG_TARGET, "Respond to PING message");
+
+                        write
+                            .send(protocol::Message::Text("PONG".to_string()))
                             .await
                     }
                 };
