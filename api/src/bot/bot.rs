@@ -165,6 +165,7 @@ impl Bot {
         });
 
         let _http_handler_msg_reader = tokio::spawn(async move {
+            // TODO: Better error handling for this channel
             while let Some(message) = rx.recv().await {
                 let socket_error = AppError::from(AppErrorType::WebSocketError);
 
@@ -203,7 +204,7 @@ impl Bot {
                             .await;
                     }
                 };
-                //
+
                 // if let Err(err) = result {
                 //     let e = socket_error.clone().inner_error(&err.to_string());
                 //     log::error!(target: LOG_TARGET, "Error when sending a message {}", e);
@@ -216,14 +217,13 @@ impl Bot {
             while let Some(msg) = rx_channel_set.recv().await {
                 {
                     let lock = connected_channels.lock();
-
                     match lock {
                         Ok(mut connected_channels) => match msg {
                             ConnectedChannelsSetMessage::Join(channel) => {
                                 connected_channels.insert(channel);
                             }
                             ConnectedChannelsSetMessage::Leave(channel) => {
-                                connected_channels.insert(channel);
+                                connected_channels.remove::<String>(&channel);
                             }
                         },
                         Err(err) => {
