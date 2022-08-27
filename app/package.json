@@ -29,6 +29,7 @@
   },
   "type": "module",
   "dependencies": {
+    "bulma": "0.9.4",
     "firebase": "9.8.3",
     "sass": "1.53.0",
     "zod": "3.18.0"

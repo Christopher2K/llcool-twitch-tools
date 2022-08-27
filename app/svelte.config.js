@@ -9,7 +9,7 @@ const config = {
   preprocess: preprocess({
     globalStyle: true,
     scss: {
-      includePaths: ['./src/styles'],
+      includePaths: ['./src/styles', './node_modules'],
     },
   }),
 
