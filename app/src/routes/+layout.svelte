@@ -21,7 +21,6 @@
       {#if loggedUserName}
         <div class="navbar-item">
           <p>{loggedUserName}</p>
-          <p />
         </div>
       {/if}
       <div class="navbar-item">
