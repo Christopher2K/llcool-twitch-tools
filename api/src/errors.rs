@@ -12,6 +12,7 @@ pub enum AppErrorType {
     DatabaseError,
     AppStateError,
     WebSocketError,
+    BotDisconnected,
 
     TwitchApiError,
 
@@ -83,6 +84,7 @@ impl error::ResponseError for AppError {
         match self.error_type {
             AppErrorType::OAuthStateError => StatusCode::UNAUTHORIZED,
             AppErrorType::Unauthenticated => StatusCode::UNAUTHORIZED,
+            AppErrorType::BotDisconnected => StatusCode::SERVICE_UNAVAILABLE,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

@@ -66,7 +66,7 @@ pub async fn get_bot_info(
         name,
         credentials_state,
         connected,
-        connected_to_chat
+        connected_to_chat,
     }))
 }
 
@@ -75,15 +75,17 @@ pub async fn join_chat(
     user: UserFromCookie,
     bot: web::Data<Bot>,
 ) -> Result<HttpResponse, AppError> {
-    if let BotStatus::Connected(sender) = &bot.status() {
-        let sender = sender.clone();
-        sender
-            .send(BotMessage::JoinChat(user.logged.username.clone()))
-            .await
-            .unwrap();
-    }
+    match &bot.status() {
+        BotStatus::Connected(sender) => {
+            sender
+                .send(BotMessage::JoinChat(user.logged.username.clone()))
+                .await
+                .unwrap();
 
-    Ok(HttpResponse::Ok().finish())
+            Ok(HttpResponse::Ok().finish())
+        }
+        _ => Err(AppError::from(AppErrorType::BotDisconnected)),
+    }
 }
 
 #[get("/leave")]
@@ -91,13 +93,15 @@ pub async fn leave_chat(
     user: UserFromCookie,
     bot: web::Data<Bot>,
 ) -> Result<HttpResponse, AppError> {
-    if let BotStatus::Connected(sender) = &bot.status() {
-        let sender = sender.clone();
-        sender
-            .send(BotMessage::LeaveChat(user.logged.username.clone()))
-            .await
-            .unwrap();
-    }
+    match &bot.status() {
+        BotStatus::Connected(sender) => {
+            sender
+                .send(BotMessage::LeaveChat(user.logged.username.clone()))
+                .await
+                .unwrap();
 
-    Ok(HttpResponse::Ok().finish())
+            Ok(HttpResponse::Ok().finish())
+        }
+        _ => Err(AppError::from(AppErrorType::BotDisconnected)),
+    }
 }
