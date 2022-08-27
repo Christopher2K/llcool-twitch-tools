@@ -2,10 +2,10 @@
   export let isConnected: boolean
   export let isConnectedToUserChat: boolean
 
-  const connexionLabel = isConnected
+  $: connexionLabel = isConnected
     ? 'Connected to Twitch socket'
     : 'Disconnected from Twitch'
-  const chatConnexionLabel = isConnectedToUserChat
+  $: chatConnexionLabel = isConnectedToUserChat
     ? 'Reading your chat'
     : 'Not in your chat channel'
 </script>
@@ -29,7 +29,8 @@
     align-items: center;
   }
 
-  li:first-child {
+  span:first-child {
+    font-size: 1.3rem;
   }
 
   span {

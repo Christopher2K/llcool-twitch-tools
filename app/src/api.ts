@@ -71,3 +71,35 @@ export async function getBotInfo(
     throw error
   }
 }
+
+export async function askBotToJoinChat(): Promise<void> {
+  const response = await fetch(`${apiUrl}/bot/join`, {
+    credentials: 'include',
+  })
+
+  if (response.ok) {
+    return
+  } else {
+    const error =
+      response.status === 401
+        ? new Error(ErrorType.Unauthorized)
+        : new Error(ErrorType.ServerError)
+    throw error
+  }
+}
+
+export async function askBotToLeaveChat(): Promise<void> {
+  const response = await fetch(`${apiUrl}/bot/leave`, {
+    credentials: 'include',
+  })
+
+  if (response.ok) {
+    return
+  } else {
+    const error =
+      response.status === 401
+        ? new Error(ErrorType.Unauthorized)
+        : new Error(ErrorType.ServerError)
+    throw error
+  }
+}
