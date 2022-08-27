@@ -20,6 +20,18 @@
   // Reactive statement
   $: botCtaLabel = isBotInChat ? 'Leave chat' : 'Join chat'
   $: onBotCtaPress = isBotInChat ? leaveChat : joinChat
+  let credentialsWarning: string | undefined = undefined
+  $: {
+    switch (botInfo.credentialsState) {
+      case 'invalid':
+        credentialsWarning =
+          'Bot credentials cannot be renewed manually. Please, log in with the bot account, or contact the admin to do so'
+        break
+      case 'notFound':
+        credentialsWarning =
+          'Bot credentials were not created. Please log in with your bot account.'
+    }
+  }
 
   // Callback
   function clearError() {
@@ -57,8 +69,16 @@
 
 <div class="card">
   <div class="card-content">
+    {#if credentialsWarning}
+      <Message
+        title="The bot is disconnected!"
+        message={credentialsWarning}
+        severity="warning"  
+        persistent
+      />
+    {/if}
     {#if error}
-      <Message on:close={clearError} message={error} />
+      <Message on:close={clearError} title="Error!" message={error} />
     {/if}
     <h1 class="title">Bot status</h1>
     <BotStatus isConnected={botInfo.connected} isConnectedToUserChat={isBotInChat} />
