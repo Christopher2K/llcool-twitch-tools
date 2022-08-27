@@ -8,7 +8,7 @@ export const LOGOUT_URL = `${apiUrl}/auth/logout`
 
 const userApiValidator = z.object({
   id: z.string(),
-  twitch_id: z.string(),
+  twitchId: z.string(),
   username: z.string(),
 })
 
@@ -19,7 +19,7 @@ export async function getUserData(
 ): Promise<UserApi> {
   const response = await fetch(
     `${apiUrl}/auth/me`,
-    cookie ==null 
+    cookie == null
       ? {
           credentials: 'include',
         }
@@ -29,6 +29,40 @@ export async function getUserData(
   if (response.ok) {
     const json = await response.json()
     return await userApiValidator.parseAsync(json)
+  } else {
+    const error =
+      response.status === 401
+        ? new Error(ErrorType.Unauthorized)
+        : new Error(ErrorType.ServerError)
+    throw error
+  }
+}
+
+const botInfoApiValidator = z.object({
+  name: z.string(),
+  connected: z.boolean(),
+  connectedToChat: z.boolean(),
+  credentialsState: z.enum(['valid', 'invalid', 'notFound']),
+})
+
+type BotInfoApi = z.infer<typeof botInfoApiValidator>
+
+export async function getBotInfo(
+  fetchFn = fetch,
+  cookie: string | undefined = undefined,
+): Promise<BotInfoApi> {
+  const response = await fetchFn(
+    `${apiUrl}/bot/info`,
+    cookie == null
+      ? {
+          credentials: 'include',
+        }
+      : { headers: { cookie } },
+  )
+
+  if (response.ok) {
+    const json = await response.json()
+    return await botInfoApiValidator.parseAsync(json)
   } else {
     const error =
       response.status === 401

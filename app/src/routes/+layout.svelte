@@ -8,9 +8,7 @@
   // Variables
   const { user, isBot } = data
   const logged = user != null
-  const loggedUserName = logged
-    ? `${isBot ? '[BOT]' : ''} ${user.username}`
-    : undefined
+  const loggedUserName = logged ? `${isBot ? '[BOT]' : ''} ${user.username}` : undefined
 </script>
 
 <nav class="navbar is-light" aria-label="main navigation">
@@ -40,6 +38,8 @@
 <slot />
 
 <style lang="scss">
+  @import 'bulma/css/bulma.css';
+
   :global {
     @import 'global.scss';
   }

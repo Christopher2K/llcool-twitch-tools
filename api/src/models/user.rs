@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::schema::users;
 
 #[derive(Queryable, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: String,
     pub username: String,
