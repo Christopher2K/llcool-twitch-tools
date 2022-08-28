@@ -26,6 +26,16 @@
       font-weight: 800;
     }
 
+    h2.type {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    h3.type {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
     p.type {
       font-size: 1rem;
     }
