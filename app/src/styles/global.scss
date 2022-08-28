@@ -1,1 +1,11 @@
 @import 'theme.scss';
+@import 'spacing-helpers.scss';
+
+* {
+  font-family: $default_font;
+}
+
+html {
+  font-size: 16px;
+}
+

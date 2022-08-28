@@ -1,0 +1,131 @@
+@import 'theme.scss';
+// MARGIN
+
+.mt-1 {
+  margin-top: $space_xs;
+}
+.mt-2 {
+  margin-top: $space_s;
+}
+.mt-3 {
+  margin-top: $space_m;
+}
+.mt-4 {
+  margin-top: $space_l;
+}
+.mt-5 {
+  margin-top: $space_xl;
+}
+
+.mr-1 {
+  margin-right: $space_xs;
+}
+.mr-2 {
+  margin-right: $space_s;
+}
+.mr-3 {
+  margin-right: $space_m;
+}
+.mr-4 {
+  margin-right: $space_l;
+}
+.mr-5 {
+  margin-right: $space_xl;
+}
+
+.ml-1 {
+  margin-left: $space_xs;
+}
+.ml-2 {
+  margin-left: $space_s;
+}
+.ml-3 {
+  margin-left: $space_m;
+}
+.ml-4 {
+  margin-left: $space_l;
+}
+.ml-5 {
+  margin-left: $space_xl;
+}
+
+.mb-1 {
+  margin-bottom: $space_xs;
+}
+.mb-2 {
+  margin-bottom: $space_s;
+}
+.mb-3 {
+  margin-bottom: $space_m;
+}
+.mb-4 {
+  margin-bottom: $space_l;
+}
+.mb-5 {
+  margin-bottom: $space_xl;
+}
+
+// PADDING
+.pt-1 {
+  padding-top: $space_xs;
+}
+.pt-2 {
+  padding-top: $space_s;
+}
+.pt-3 {
+  padding-top: $space_m;
+}
+.pt-4 {
+  padding-top: $space_l;
+}
+.pt-5 {
+  padding-top: $space_xl;
+}
+
+.pr-1 {
+  padding-right: $space_xs;
+}
+.pr-2 {
+  padding-right: $space_s;
+}
+.pr-3 {
+  padding-right: $space_m;
+}
+.pr-4 {
+  padding-right: $space_l;
+}
+.pr-5 {
+  padding-right: $space_xl;
+}
+
+.pl-1 {
+  padding-left: $space_xs;
+}
+.pl-2 {
+  padding-left: $space_s;
+}
+.pl-3 {
+  padding-left: $space_m;
+}
+.pl-4 {
+  padding-left: $space_l;
+}
+.pl-5 {
+  padding-left: $space_xl;
+}
+
+.pb-1 {
+  padding-bottom: $space_xs;
+}
+.pb-2 {
+  padding-bottom: $space_s;
+}
+.pb-3 {
+  padding-bottom: $space_m;
+}
+.pb-4 {
+  padding-bottom: $space_l;
+}
+.pb-5 {
+  padding-bottom: $space_xl;
+}
