@@ -1,6 +1,64 @@
 @import 'theme.scss';
 // MARGIN
 
+.m-1 {
+  margin: $space_xs;
+}
+.m-2 {
+  margin: $space_s;
+}
+.m-3 {
+  margin: $space_m;
+}
+.m-4 {
+  margin: $space_l;
+}
+.m-5 {
+  margin: $space_xl;
+}
+
+.mx-1 {
+  margin-left: $space_xs;
+  margin-right: $space_xs;
+}
+.mx-2 {
+  margin-left: $space_s;
+  margin-right: $space_s;
+}
+.mx-3 {
+  margin-left: $space_m;
+  margin-right: $space_m;
+}
+.mx-4 {
+  margin-left: $space_l;
+  margin-right: $space_l;
+}
+.mx-5 {
+  margin-left: $space_xl;
+  margin-right: $space_xl;
+}
+
+.my-1 {
+  margin-top: $space_xs;
+  margin-bottom: $space_xs;
+}
+.my-2 {
+  margin-top: $space_s;
+  margin-bottom: $space_s;
+}
+.my-3 {
+  margin-top: $space_m;
+  margin-bottom: $space_m;
+}
+.my-4 {
+  margin-top: $space_l;
+  margin-bottom: $space_l;
+}
+.my-5 {
+  margin-top: $space_xl;
+  margin-bottom: $space_xl;
+}
+
 .mt-1 {
   margin-top: $space_xs;
 }
@@ -66,6 +124,64 @@
 }
 
 // PADDING
+.p-1 {
+  padding: $space_xs;
+}
+.p-2 {
+  padding: $space_s;
+}
+.p-3 {
+  padding: $space_m;
+}
+.p-4 {
+  padding: $space_l;
+}
+.p-5 {
+  padding: $space_xl;
+}
+
+.px-1 {
+  padding-left: $space_xs;
+  padding-right: $space_xs;
+}
+.px-2 {
+  padding-left: $space_s;
+  padding-right: $space_s;
+}
+.px-3 {
+  padding-left: $space_m;
+  padding-right: $space_m;
+}
+.px-4 {
+  padding-left: $space_l;
+  padding-right: $space_l;
+}
+.px-5 {
+  padding-left: $space_xl;
+  padding-right: $space_xl;
+}
+
+.py-1 {
+  padding-top: $space_xs;
+  padding-bottom: $space_xs;
+}
+.py-2 {
+  padding-top: $space_s;
+  padding-bottom: $space_s;
+}
+.py-3 {
+  padding-top: $space_m;
+  padding-bottom: $space_m;
+}
+.py-4 {
+  padding-top: $space_l;
+  padding-bottom: $space_l;
+}
+.py-5 {
+  padding-top: $space_xl;
+  padding-bottom: $space_xl;
+}
+
 .pt-1 {
   padding-top: $space_xs;
 }

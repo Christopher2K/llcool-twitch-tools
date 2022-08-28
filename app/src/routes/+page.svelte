@@ -2,6 +2,7 @@
   import { LOGIN_URL, LOGOUT_URL } from '@app/api'
   import Button from '@app/components/Button.svelte'
   import Typography from '@app/components/Typography.svelte'
+  import Banner from '@app/components/Banner.svelte'
 
   import type { PageData } from './$types'
 
@@ -19,10 +20,12 @@
     <Typography tag="h1" align="center" class="mb-3">{title}</Typography>
 
     {#if isBot}
-      <Typography align="center" class="mb-2">
-        You're using your bot account. This is super useful if you want to administrate
-        your bot behavior or maybe fix an issue with its connection to Twitch.
-      </Typography>
+      <Banner class="mb-3" theme="info" title="Notice">
+        <Typography align="center">
+          You're using your bot account. This is super useful if you want to administrate
+          your bot behavior or maybe fix an issue with its connection to Twitch.
+        </Typography>
+      </Banner>
     {/if}
 
     <Typography align="center" class="mb-5"

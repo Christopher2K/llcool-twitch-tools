@@ -27,7 +27,7 @@
     padding: $space_xs;
 
     border: 4px solid $primary_dark;
-    border-radius: 8px;
+    border-radius: $radius_s;
 
     font-weight: 700;
     cursor: pointer;
