@@ -1,14 +1,17 @@
 <script lang="ts">
   import Typography from './Typography.svelte'
+  import { page } from '$app/stores'
 
   export let label: string
   export let href: string
   export let alternate: boolean = false
   let className: string = ''
   export { className as class }
+
+  $: active = $page.url.pathname === href
 </script>
 
-<a {href} class="px-1 py-2 {className}" class:alternate>
+<a {href} class="px-1 py-2 {className}" class:active class:alternate>
   <Typography variant="bold">
     {label}
   </Typography>
@@ -28,6 +31,12 @@
 
     &:hover {
       background-color: $primary;
+    }
+
+    &.active {
+      background-color: $primary;
+      border-color: $white;
+      color: $white;
     }
   }
 
