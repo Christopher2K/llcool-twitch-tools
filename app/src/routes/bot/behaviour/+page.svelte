@@ -2,5 +2,5 @@
   import Typography from '@app/components/Typography.svelte'
 </script>
 
-<Typography tag='h1'>Status</Typography>
+<Typography tag='h1'>Behaviour</Typography>
 <p>TDB !!</p>

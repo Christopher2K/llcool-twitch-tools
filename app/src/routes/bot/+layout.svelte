@@ -1,92 +1,15 @@
 <script lang="ts">
-  import { LOGOUT_URL } from '@app/api'
-
-  import Typography from '@app/components/Typography.svelte'
   import SideMenuItem from '@app/components/SideMenuItem.svelte'
-  import Button from '@app/components/Button.svelte'
-
-  // State
-  let isMenuOpen = false
-
-  // Callback
-  function closeMenu() {
-    isMenuOpen = false
-  }
-
-  function openMenu() {
-    isMenuOpen = true
-  }
+  import DashboardLayout from '@app/components/DashboardLayout.svelte'
 </script>
 
-<div class="root">
-  <nav class="p-3" class:open={isMenuOpen}>
-    <div class="responsive-navbar">
-      <Button class="mb-2" label="Close" on:click={closeMenu} />
-    </div>
-    <Typography tag="h2">Bot dashboard</Typography>
-    <div class="links my-3">
-      <SideMenuItem href="" label="Status" />
-      <SideMenuItem href="" label="Global behaviour" />
-    </div>
+<DashboardLayout title="Bot dashboard">
+  <svelte:fragment slot="links">
+    <SideMenuItem href="/bot" label="Status" />
+    <SideMenuItem href="/bot/behaviour" label="Global behaviour" />
+  </svelte:fragment>
 
-    <SideMenuItem alternate href={LOGOUT_URL} label="Logout" />
-  </nav>
-  <main class="p-3">
-    <div class="responsive-navbar">
-      <Button class="mb-2" label="Menu" on:click={openMenu} />
-    </div>
+  <svelte:fragment slot="content">
     <slot />
-  </main>
-</div>
-
-<style lang="scss">
-  @import 'theme.scss';
-  @import 'responsive.scss';
-
-  .root {
-    width: 100%;
-    height: 100vh;
-
-    display: grid;
-    grid-template-columns: 15rem auto;
-    grid-gap: $space_s;
-
-    @include mobileStyle {
-      grid-template-columns: auto;
-    }
-  }
-
-  nav {
-    width: 100%;
-    background-color: $primary_dark;
-    min-height: 100%;
-
-    @include mobileStyle {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 99;
-
-      width: 100%;
-      height: 100%;
-
-      &.open {
-        display: block;
-      }
-    }
-  }
-
-  .links {
-    width: 100%;
-    display: grid;
-    grid-template-columns: auto;
-    row-gap: $space_s;
-  }
-
-  .responsive-navbar {
-    @include desktopStyle {
-      display: none;
-    }
-  }
-</style>
+  </svelte:fragment>
+</DashboardLayout>
