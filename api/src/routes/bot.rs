@@ -1,5 +1,6 @@
-use actix_web::{get, web, HttpResponse};
+use actix_web::{get, patch, web, HttpResponse};
 use diesel::OptionalExtension;
+use std::sync::RwLock;
 
 use crate::bot::{Bot, BotMessage, BotStatus};
 use crate::errors::*;
@@ -7,7 +8,7 @@ use crate::extractors::user_from_cookie::UserFromCookie;
 use crate::models::bot_credentials::get_bot_credentials_by_user_id;
 use crate::models::bot_info::{BotInfo, CredentialsState};
 use crate::models::user::get_user_by_username;
-use crate::states::app_config::AppConfig;
+use crate::states::app_config::{self, AppConfig};
 use crate::twitch::id_api::validate_user_token;
 use crate::types::DbPool;
 
@@ -16,9 +17,12 @@ pub async fn get_bot_info(
     user: UserFromCookie,
     db: web::Data<DbPool>,
     app_config: web::Data<AppConfig>,
-    bot: web::Data<Bot>,
+    bot: web::Data<RwLock<Bot>>,
 ) -> Result<HttpResponse, AppError> {
-    // TODO: In the current user chat
+    let bot = bot
+        .read()
+        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+
     let db = db
         .get()
         .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
@@ -73,8 +77,12 @@ pub async fn get_bot_info(
 #[get("/join")]
 pub async fn join_chat(
     user: UserFromCookie,
-    bot: web::Data<Bot>,
+    bot: web::Data<RwLock<Bot>>,
 ) -> Result<HttpResponse, AppError> {
+    let bot = bot
+        .read()
+        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+
     match &bot.status() {
         BotStatus::Connected(sender) => {
             sender
@@ -91,8 +99,12 @@ pub async fn join_chat(
 #[get("/leave")]
 pub async fn leave_chat(
     user: UserFromCookie,
-    bot: web::Data<Bot>,
+    bot: web::Data<RwLock<Bot>>,
 ) -> Result<HttpResponse, AppError> {
+    let bot = bot
+        .read()
+        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+
     match &bot.status() {
         BotStatus::Connected(sender) => {
             sender
@@ -103,5 +115,28 @@ pub async fn leave_chat(
             Ok(HttpResponse::Ok().finish())
         }
         _ => Err(AppError::from(AppErrorType::BotDisconnected)),
+    }
+}
+
+#[get("/connect")]
+pub async fn connect(
+    user: UserFromCookie,
+    app_config: web::Data<AppConfig>,
+    bot: web::Data<RwLock<Bot>>,
+) -> Result<HttpResponse, AppError> {
+    if user.logged.username != app_config.chat_bot_username {
+        Err(AppError::from(AppErrorType::Unauthorized))
+    } else {
+        let mut bot = bot
+            .write()
+            .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+
+        match &bot.status() {
+            BotStatus::Connected(_) => Ok(HttpResponse::Ok().finish()),
+            BotStatus::Disconnected => {
+                let _ = &bot.connect().await;
+                Ok(HttpResponse::Ok().finish())
+            }
+        }
     }
 }

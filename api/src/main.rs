@@ -34,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     let mut twitch_bot = bot::Bot::new(shared_pool.clone(), app_config.clone());
     twitch_bot.connect().await;
 
-    let shared_twitch_bot = web::Data::new(twitch_bot);
+    let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
 
     // SSL config
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
@@ -77,7 +77,8 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/bot")
                             .service(routes::bot::join_chat)
                             .service(routes::bot::leave_chat)
-                            .service(routes::bot::get_bot_info),
+                            .service(routes::bot::get_bot_info)
+                            .service(routes::bot::connect),
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
