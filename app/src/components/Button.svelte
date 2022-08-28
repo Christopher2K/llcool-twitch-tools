@@ -23,7 +23,7 @@
 
   a,
   button {
-    display: block;
+    display: inline-block;
     padding: $space_xs;
 
     border: 4px solid $primary_dark;

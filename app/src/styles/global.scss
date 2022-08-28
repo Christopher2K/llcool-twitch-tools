@@ -1,7 +1,8 @@
 @import 'theme.scss';
+
 @import 'spacing-helpers.scss';
 
-* {
+html {
   font-family: $default_font;
 }
 
