@@ -63,7 +63,7 @@
   }
 
   div {
-    max-width: 600px;
+    max-width: 720px;
 
     display: flex;
     flex-direction: column;
