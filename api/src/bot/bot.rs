@@ -2,10 +2,12 @@ use actix_web::web::Data;
 use futures::{SinkExt, StreamExt};
 use reqwest::Url;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol};
+use twitch_irc::message::{IRCMessage, IRCParseError, ServerMessage};
 
 use crate::bot::types::{BotMessage, ConnectedChannelsSetMessage, TwitchMessage};
 use crate::errors::{AppError, AppErrorType};
@@ -137,24 +139,39 @@ impl Bot {
                 match data {
                     Ok(msg) => {
                         if let protocol::Message::Text(text) = msg {
-                            match TwitchMessage::from_str(&text).unwrap() {
-                                TwitchMessage::RplWelcome => {
-                                    log::info!(
-                                        target: LOG_TARGET,
-                                        "Bot authenticated with user {}",
-                                        &bot_username
-                                    );
-                                    tx_status.send(()).await.unwrap();
-                                }
-                                TwitchMessage::Ping => {
-                                    log::info!(target: LOG_TARGET, "PING received",);
-                                    tx_pong.send(BotMessage::Pong).await.unwrap();
-                                }
-                                _ => log::info!(
-                                    target: LOG_TARGET,
-                                    "Unhandled socket message: {}",
-                                    text
-                                ),
+                            let messages = text.lines().collect::<Vec<&str>>();
+
+                            for message in messages {
+                                let message = IRCMessage::parse(&message).and_then(|irc_message| {
+                                    ServerMessage::try_from(irc_message)
+                                        .map_err(|_| IRCParseError::TooManySpacesInMiddleParams)
+                                });
+
+                                match message {
+                                    Ok(ServerMessage::GlobalUserState(_)) => {
+                                        log::info!(
+                                            target: LOG_TARGET,
+                                            "Bot authenticated with user {}",
+                                            &bot_username
+                                        );
+                                        tx_status.send(()).await.unwrap();
+                                    }
+                                    Ok(ServerMessage::Ping(_)) => {
+                                        log::info!(target: LOG_TARGET, "PING received",);
+                                        tx_pong.send(BotMessage::Pong).await.unwrap();
+                                    }
+                                    Ok(unhandled_msg) => {
+                                        log::info!(
+                                            target: LOG_TARGET,
+                                            "Unhandled socket message {:?}",
+                                            &unhandled_msg
+                                        );
+                                    }
+                                    Err(e) => {
+                                        log::error!(target: LOG_TARGET, "Cannot parse message");
+                                        dbg!(e);
+                                    }
+                                };
                             }
                         }
                     }

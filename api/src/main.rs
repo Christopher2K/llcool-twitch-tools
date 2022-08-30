@@ -32,7 +32,8 @@ async fn main() -> std::io::Result<()> {
 
     // Twitch bot
     let mut twitch_bot = bot::Bot::new(shared_pool.clone(), app_config.clone());
-    twitch_bot.connect().await;
+
+    twitch_bot.connect().await.unwrap();
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
 
