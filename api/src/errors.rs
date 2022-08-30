@@ -13,6 +13,7 @@ pub enum AppErrorType {
     AppStateError,
     WebSocketError,
     BotDisconnected,
+    EntityNotFoundError,
 
     TwitchApiError,
 
@@ -87,6 +88,7 @@ impl error::ResponseError for AppError {
             AppErrorType::Unauthenticated => StatusCode::UNAUTHORIZED,
             AppErrorType::BotDisconnected => StatusCode::SERVICE_UNAVAILABLE,
             AppErrorType::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppErrorType::EntityNotFoundError => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

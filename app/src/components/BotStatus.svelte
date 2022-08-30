@@ -12,11 +12,11 @@
 
 <ul class="mb-5">
   <li>
-    <span class="mr-2">{isConnected ? '🟢' : '🔴'}</span>
+    <span class="icon-emoji mr-2">{isConnected ? '🟢' : '🔴'}</span>
     <span>{connexionLabel}</span>
   </li>
   <li>
-    <span class="mr-2">{isConnectedToUserChat ? '🤖' : '💤'}</span>
+    <span class="icon-emoji mr-2">{isConnectedToUserChat ? '🤖' : '💤'}</span>
     <span>{chatConnexionLabel}</span>
   </li>
 </ul>
@@ -27,10 +27,6 @@
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
-  }
-
-  span:first-child {
-    font-size: 1.3rem;
   }
 
   span {

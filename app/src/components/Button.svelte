@@ -14,8 +14,8 @@
 {#if href}
   <a {href} class="{className} {theme}">{label}</a>
 {:else}
-  <button on:click class="{className} {theme}">
-    {label}
+  <button disabled={isLoading} on:click class="{className} {theme}">
+    {isLoading ? 'Loading...' : label}
   </button>
 {/if}
 

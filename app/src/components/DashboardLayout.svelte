@@ -50,7 +50,7 @@
     height: 100vh;
 
     display: grid;
-    grid-template-columns: 15rem auto;
+    grid-template-columns: 15rem minmax(0, 60rem);
     grid-gap: $space_s;
 
     @include mobileStyle {

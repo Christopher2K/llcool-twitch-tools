@@ -63,12 +63,14 @@ impl Bot {
                 AppError::from(AppErrorType::InternalError).inner_error(&e.to_string())
             })?;
 
-            let db_error = AppError::from(AppErrorType::DatabaseError);
-
             // RENEW BY DEFAULT THE TWITCH BOT TOKEN
             let credentials = get_user_by_username(&db, &bot_username)
                 .and_then(|user| get_bot_credentials_by_user_id(&db, &user.id))
-                .map_err(|e| db_error.clone().inner_error(&e.to_string()))?;
+                .map_err(|e| {
+                    AppError::from(AppErrorType::EntityNotFoundError)
+                        .clone()
+                        .inner_error(&e.to_string())
+                })?;
 
             let tokens = renew_token(&self.app_config, &credentials.refresh_token).await?;
             update_bot_credentials(
@@ -79,7 +81,11 @@ impl Bot {
                     refresh_token: &tokens.refresh_token.clone(),
                 },
             )
-            .map_err(|e| db_error.clone().inner_error(&e.to_string()))?;
+            .map_err(|e| {
+                AppError::from(AppErrorType::DatabaseError)
+                    .clone()
+                    .inner_error(&e.to_string())
+            })?;
 
             tokens.access_token
         };

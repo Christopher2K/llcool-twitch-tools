@@ -6,6 +6,21 @@ import { apiUrl } from '@app/env'
 export const LOGIN_URL = `${apiUrl}/auth/login`
 export const LOGOUT_URL = `${apiUrl}/auth/logout`
 
+function handleHttpError(response: Response): never {
+  let error = new Error(ErrorType.ServerError)
+
+  switch (response.status) {
+    case 401:
+      error = new Error(ErrorType.Unauthorized)
+      break
+    case 403:
+      error = new Error(ErrorType.Forbidden)
+      break
+  }
+
+  throw error
+}
+
 const userApiValidator = z.object({
   id: z.string(),
   twitchId: z.string(),
@@ -26,16 +41,12 @@ export async function getUserData(
       : { headers: { cookie } },
   )
 
-  if (response.ok) {
-    const json = await response.json()
-    return await userApiValidator.parseAsync(json)
-  } else {
-    const error =
-      response.status === 401
-        ? new Error(ErrorType.Unauthorized)
-        : new Error(ErrorType.ServerError)
-    throw error
+  if (!response.ok) {
+    handleHttpError(response)
   }
+
+  const json = await response.json()
+  return await userApiValidator.parseAsync(json)
 }
 
 const botInfoApiValidator = z.object({
@@ -60,16 +71,12 @@ export async function getBotInfo(
       : { headers: { cookie } },
   )
 
-  if (response.ok) {
-    const json = await response.json()
-    return await botInfoApiValidator.parseAsync(json)
-  } else {
-    const error =
-      response.status === 401
-        ? new Error(ErrorType.Unauthorized)
-        : new Error(ErrorType.ServerError)
-    throw error
+  if (!response.ok) {
+    handleHttpError(response)
   }
+
+  const json = await response.json()
+  return await botInfoApiValidator.parseAsync(json)
 }
 
 export async function askBotToJoinChat(): Promise<void> {
@@ -77,14 +84,8 @@ export async function askBotToJoinChat(): Promise<void> {
     credentials: 'include',
   })
 
-  if (response.ok) {
-    return
-  } else {
-    const error =
-      response.status === 401
-        ? new Error(ErrorType.Unauthorized)
-        : new Error(ErrorType.ServerError)
-    throw error
+  if (!response.ok) {
+    handleHttpError(response)
   }
 }
 
@@ -93,13 +94,17 @@ export async function askBotToLeaveChat(): Promise<void> {
     credentials: 'include',
   })
 
-  if (response.ok) {
-    return
-  } else {
-    const error =
-      response.status === 401
-        ? new Error(ErrorType.Unauthorized)
-        : new Error(ErrorType.ServerError)
-    throw error
+  if (!response.ok) {
+    handleHttpError(response)
+  }
+}
+
+export async function connectBotToTwitch(): Promise<void> {
+  const response = await fetch(`${apiUrl}/bot/connect`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    handleHttpError(response)
   }
 }
