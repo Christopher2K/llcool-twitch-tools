@@ -4,6 +4,7 @@
 
 <script lang="ts">
   export let label: string
+  export let isLoading: boolean = false
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
   let className: string = ''

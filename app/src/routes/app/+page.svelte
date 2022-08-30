@@ -1,6 +1,9 @@
 <script lang="ts">
   import BotStatus from '@app/components/BotStatus.svelte'
-  import Message from '@app/components/Message.svelte'
+  import Banner from '@app/components/Banner.svelte'
+  import Typography from '@app/components/Typography.svelte'
+  import Button from '@app/components/Button.svelte'
+
   import { askBotToJoinChat, askBotToLeaveChat } from '@app/api'
 
   import type { PageData } from './$types'
@@ -67,29 +70,32 @@
   }
 </script>
 
-<div class="card">
-  <div class="card-content">
-    {#if credentialsWarning}
-      <Message
-        title="The bot is disconnected!"
-        message={credentialsWarning}
-        severity="warning"  
-        persistent
-      />
-    {/if}
-    {#if error}
-      <Message on:close={clearError} title="Error!" message={error} />
-    {/if}
-    <h1 class="title">Bot status</h1>
-    <BotStatus isConnected={botInfo.connected} isConnectedToUserChat={isBotInChat} />
-    <button
-      type="button"
-      class="button is-primary"
-      class:is-loading={updatingBotPresence}
-      on:click={onBotCtaPress}>{botCtaLabel}</button
-    >
-  </div>
-</div>
+<Typography tag="h1">Dashboard</Typography>
+
+<section>
+  <Typography tag="h2" class="mb-2">Bot status</Typography>
+  {#if credentialsWarning}
+    <Banner title="The bot is disconnected!" theme="warning" class="mb-2">
+      <Typography>
+        {credentialsWarning}
+      </Typography>
+    </Banner>
+  {/if}
+
+  {#if error}
+    <Banner title="Error!" on:close={clearError} theme="danger" closable class="mb-2">
+      <Typography>{error}</Typography>
+    </Banner>
+  {/if}
+
+  <BotStatus isConnected={botInfo.connected} isConnectedToUserChat={isBotInChat} />
+  <Button
+    class="button is-primary"
+    isLoading={updatingBotPresence}
+    on:click={onBotCtaPress}
+    label={botCtaLabel}
+  />
+</section>
 
 <style lang="scss">
   @import 'theme.scss';

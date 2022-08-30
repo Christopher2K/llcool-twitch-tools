@@ -3,7 +3,7 @@
   import DashboardLayout from '@app/components/DashboardLayout.svelte'
 </script>
 
-<DashboardLayout title="Dashboard">
+<DashboardLayout title="Twitch Tools">
   <svelte:fragment slot="links">
     <SideMenuItem href="/app" label="Dashboard" />
     <SideMenuItem href="/app/commands" label="Commands" />
