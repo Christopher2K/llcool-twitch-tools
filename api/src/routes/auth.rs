@@ -70,9 +70,7 @@ pub async fn get_twitch_access_token(
             })
     }?;
 
-    let db = pool
-        .get()
-        .map_err(|err| AppError::new(None).inner_error(&err.to_string()))?;
+    let db = pool.get()?;
 
     let base_oauth_error = AppError::new(Some(AppErrorType::OAuthStateError));
     let base_twitch_request_error = AppError::new(Some(AppErrorType::TwitchApiError));

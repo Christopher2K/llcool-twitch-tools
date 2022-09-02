@@ -27,3 +27,5 @@ actix-cors = "0.6.2"
 tokio-tungstenite = {version = "0.17.2", features = ["native-tls"]}
 tokio = { version = "1.20.1", features = ["full"] }
 twitch-irc = "4.0.0"
+r2d2 = "0.8.10"
+url = "2.2.2"

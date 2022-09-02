@@ -45,14 +45,6 @@ impl AppError {
         }
     }
 
-    pub fn from(error_type: AppErrorType) -> Self {
-        Self {
-            error_type,
-            extra_context: None,
-            inner_error: None,
-        }
-    }
-
     pub fn extra_context(self, extra_content: &str) -> Self {
         Self {
             extra_context: Some(extra_content.to_string()),
@@ -93,3 +85,4 @@ impl error::ResponseError for AppError {
         }
     }
 }
+

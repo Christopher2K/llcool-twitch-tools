@@ -1,16 +1,17 @@
 use actix_web::web::Data;
-use futures::{SinkExt, StreamExt};
+use futures::stream::{self, SplitSink, SplitStream};
+use futures::SinkExt;
+use futures::StreamExt;
 use reqwest::Url;
 use std::collections::HashSet;
-use std::convert::TryFrom;
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc;
-use tokio_tungstenite::{connect_async, tungstenite::protocol};
-use twitch_irc::message::{IRCMessage, IRCParseError, ServerMessage};
+use tokio_tungstenite::{connect_async, tungstenite::protocol, MaybeTlsStream, WebSocketStream};
+use twitch_irc::irc;
+use twitch_irc::message::{AsRawIRC, IRCMessage, ServerMessage};
 
-use crate::bot::types::{BotMessage, ConnectedChannelsSetMessage, TwitchMessage};
-use crate::errors::{AppError, AppErrorType};
+use crate::errors::*;
 use crate::models::bot_credentials::{
     get_bot_credentials_by_user_id, update_bot_credentials, UpdateBotCredentials,
 };
@@ -19,15 +20,24 @@ use crate::states::app_config::AppConfig;
 use crate::twitch::id_api::renew_token;
 use crate::types::DbPool;
 
-const LOG_TARGET: &'static str = "twitch_bot";
+pub const LOG_TARGET: &'static str = "twitch_bot";
 const WEBSOCKET_CLIENT_URL: &'static str = "wss://irc-ws.chat.twitch.tv:443";
 
-type Sender = mpsc::Sender<BotMessage>;
-type ChannelSet = Arc<Mutex<HashSet<String>>>;
+type BotActionSender = mpsc::Sender<BotAction>;
+type SocketWriter = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, protocol::Message>;
+type SocketReader = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
+type ChannelSet = Arc<RwLock<HashSet<String>>>;
+
+#[derive(Debug, Clone)]
+pub enum BotAction {
+    JoinChat(String),
+    LeaveChat(String),
+    Pong,
+}
 
 #[derive(Clone)]
 pub enum BotStatus {
-    Connected(Sender),
+    Connected(BotActionSender),
     Disconnected,
 }
 
@@ -44,7 +54,7 @@ impl Bot {
             app_config,
             pool,
             bot_status: BotStatus::Disconnected,
-            connected_channels: Arc::new(Mutex::new(HashSet::new())),
+            connected_channels: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -61,18 +71,11 @@ impl Bot {
                 target: LOG_TARGET,
                 "Getting and refreshing bot credentials..."
             );
-            let db = self.pool.get().map_err(|e| {
-                AppError::from(AppErrorType::InternalError).inner_error(&e.to_string())
-            })?;
+            let db = self.pool.get()?;
 
             // RENEW BY DEFAULT THE TWITCH BOT TOKEN
             let credentials = get_user_by_username(&db, &bot_username)
-                .and_then(|user| get_bot_credentials_by_user_id(&db, &user.id))
-                .map_err(|e| {
-                    AppError::from(AppErrorType::EntityNotFoundError)
-                        .clone()
-                        .inner_error(&e.to_string())
-                })?;
+                .and_then(|user| get_bot_credentials_by_user_id(&db, &user.id))?;
 
             let tokens = renew_token(&self.app_config, &credentials.refresh_token).await?;
             update_bot_credentials(
@@ -82,189 +85,188 @@ impl Bot {
                     access_token: &tokens.access_token.clone(),
                     refresh_token: &tokens.refresh_token.clone(),
                 },
-            )
-            .map_err(|e| {
-                AppError::from(AppErrorType::DatabaseError)
-                    .clone()
-                    .inner_error(&e.to_string())
-            })?;
+            )?;
 
             tokens.access_token
         };
 
-        // OPEN APP COMMUNICATION CHANNELS
-        let (tx, mut rx) = mpsc::channel::<BotMessage>(32);
-        let (tx_status, mut rx_status) = mpsc::channel::<()>(10);
-        let (tx_channel_set, mut rx_channel_set) = mpsc::channel::<ConnectedChannelsSetMessage>(10);
+        // OPEN TASKS COMMUNICATION CHANNELS
+        // -> Receive actions from HTTP handler and transmit them to the socket sender
+        let (tx_action, rx_action) = mpsc::channel::<BotAction>(32);
+
+        // -> Receive boolean messages to tell the struct to update its connection status
+        let (tx_connected, mut rx_connected) = mpsc::channel::<bool>(1);
 
         // OPEN TWITCH TMI CONNECTION
-        let ws_error = AppError::from(AppErrorType::WebSocketError);
+        let url = Url::parse(WEBSOCKET_CLIENT_URL)?;
+        let (ws_stream, _) = connect_async(url).await?;
 
-        let url = Url::parse(WEBSOCKET_CLIENT_URL).expect("Cannot parse WS url");
-        let (ws_stream, _) = connect_async(url)
-            .await
-            .map_err(|e| ws_error.clone().inner_error(&e.to_string()))?;
-
-        let (mut write, read) = ws_stream.split();
+        let (mut socket_writer, socket_reader) = ws_stream.split();
         log::info!(
             target: LOG_TARGET,
             "Bot connected to Twitch WS, proceed to authentication..."
         );
+        self.authenticate_to_irc(&mut socket_writer, &bot_access_token)
+            .await?;
 
-        // AUTHENTICATION PROCESS
-        write
-            .send(protocol::Message::Text(
-                "CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands".to_string(),
-            ))
-            .await
-            .map_err(|e| ws_error.clone().inner_error(&e.to_string()))?;
+        log::info!(
+            target: LOG_TARGET,
+            "Waiting for authentication confirmation..."
+        );
 
-        write
-            .send(protocol::Message::Text(format!(
-                "PASS oauth:{}",
-                &bot_access_token
-            )))
-            .await
-            .map_err(|e| ws_error.clone().inner_error(&e.to_string()))?;
+        let _reading_task_handler =
+            self.start_reading(socket_reader, tx_action.clone(), tx_connected.clone());
+        let _reading_internal_msg_handler =
+            self.start_reading_internal_and_respond(socket_writer, rx_action);
 
-        write
-            .send(protocol::Message::Text("NICK llcoolbot_".to_string()))
-            .await
-            .map_err(|e| ws_error.clone().inner_error(&e.to_string()))?;
-
-        let tx_pong = tx.clone();
-
-        let _socket_reader = tokio::spawn(async move {
-            read.for_each(|data| async {
-                match data {
-                    Ok(msg) => {
-                        if let protocol::Message::Text(text) = msg {
-                            let messages = text.lines().collect::<Vec<&str>>();
-
-                            for message in messages {
-                                let message = IRCMessage::parse(&message).and_then(|irc_message| {
-                                    ServerMessage::try_from(irc_message)
-                                        .map_err(|_| IRCParseError::TooManySpacesInMiddleParams)
-                                });
-
-                                match message {
-                                    Ok(ServerMessage::GlobalUserState(_)) => {
-                                        log::info!(
-                                            target: LOG_TARGET,
-                                            "Bot authenticated with user {}",
-                                            &bot_username
-                                        );
-                                        tx_status.send(()).await.unwrap();
-                                    }
-                                    Ok(ServerMessage::Ping(_)) => {
-                                        log::info!(target: LOG_TARGET, "PING received",);
-                                        tx_pong.send(BotMessage::Pong).await.unwrap();
-                                    }
-                                    Ok(unhandled_msg) => {
-                                        log::info!(
-                                            target: LOG_TARGET,
-                                            "Unhandled socket message {:?}",
-                                            &unhandled_msg
-                                        );
-                                    }
-                                    Err(e) => {
-                                        log::error!(target: LOG_TARGET, "Cannot parse message");
-                                        dbg!(e);
-                                    }
-                                };
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        log::error!(
-                            target: LOG_TARGET,
-                            "Cannot read this message: {}",
-                            e.to_string()
-                        )
-                    }
-                }
-            })
-            .await;
-        });
-
-        let _http_handler_msg_reader = tokio::spawn(async move {
-            // TODO: Better error handling for this channel
-            while let Some(message) = rx.recv().await {
-                let socket_error = AppError::from(AppErrorType::WebSocketError);
-
-                let result = match message {
-                    BotMessage::JoinChat(channel) => {
-                        log::info!(target: LOG_TARGET, "Bot joined channel #{}", channel);
-                        write
-                            .send(protocol::Message::Text(
-                                format!("JOIN #{}", &channel).to_string(),
-                            ))
-                            .await;
-
-                        tx_channel_set
-                            .send(ConnectedChannelsSetMessage::Join(channel.clone()))
-                            .await
-                            .unwrap();
-                    }
-                    BotMessage::LeaveChat(channel) => {
-                        log::info!(target: LOG_TARGET, "Bot left channel #{}", channel);
-                        write
-                            .send(protocol::Message::Text(
-                                format!("PART #{}", &channel).to_string(),
-                            ))
-                            .await;
-
-                        tx_channel_set
-                            .send(ConnectedChannelsSetMessage::Leave(channel.clone()))
-                            .await
-                            .unwrap();
-                    }
-                    BotMessage::Pong => {
-                        log::info!(target: LOG_TARGET, "Respond to PING message");
-
-                        write
-                            .send(protocol::Message::Text("PONG".to_string()))
-                            .await;
-                    }
-                };
-
-                // if let Err(err) = result {
-                //     let e = socket_error.clone().inner_error(&err.to_string());
-                //     log::error!(target: LOG_TARGET, "Error when sending a message {}", e);
-                // };
+        if let Some(is_connected) = rx_connected.recv().await {
+            if is_connected {
+                self.bot_status = BotStatus::Connected(tx_action.clone());
+            } else {
+                self.bot_status = BotStatus::Disconnected
             }
-        });
-
-        let connected_channels = self.connected_channels.clone();
-        let _hash_set_manager = tokio::spawn(async move {
-            while let Some(msg) = rx_channel_set.recv().await {
-                {
-                    let lock = connected_channels.lock();
-                    match lock {
-                        Ok(mut connected_channels) => match msg {
-                            ConnectedChannelsSetMessage::Join(channel) => {
-                                connected_channels.insert(channel);
-                            }
-                            ConnectedChannelsSetMessage::Leave(channel) => {
-                                connected_channels.remove::<String>(&channel);
-                            }
-                        },
-                        Err(err) => {
-                            log::error!(
-                                target: LOG_TARGET,
-                                "Error when getting the hashset connected_channels {}",
-                                err
-                            );
-                        }
-                    };
-                }
-            }
-        });
-
-        if let Some(_) = rx_status.recv().await {
-            self.bot_status = BotStatus::Connected(tx.clone())
         };
 
         Ok(())
+    }
+
+    async fn authenticate_to_irc(
+        &self,
+        socket_writer: &mut SocketWriter,
+        access_token: &str,
+    ) -> Result<(), AppError> {
+        socket_writer
+            .send(protocol::Message::Text(
+                "CAP REQ :twitch.tv/membership twitch.tv/tags twitch.tv/commands".to_string(),
+            ))
+            .await?;
+
+        socket_writer
+            .send(protocol::Message::Text(format!(
+                "PASS oauth:{}",
+                access_token
+            )))
+            .await?;
+
+        socket_writer
+            .send(protocol::Message::Text("NICK llcoolbot_".to_string()))
+            .await?;
+
+        Ok(())
+    }
+
+    fn start_reading_internal_and_respond(
+        &self,
+        mut socket_writer: SocketWriter,
+        mut bot_action_receiver: mpsc::Receiver<BotAction>,
+    ) -> tokio::task::JoinHandle<()> {
+        let shared_socket_list = self.connected_channels.clone();
+
+        tokio::spawn(async move {
+            while let Some(action) = bot_action_receiver.recv().await {
+                let message = match action.clone() {
+                    BotAction::Pong => protocol::Message::Text(irc!["PONG"].as_raw_irc()),
+                    BotAction::JoinChat(channel_name) => protocol::Message::Text(
+                        irc!["JOIN", format!("#{}", &channel_name)].as_raw_irc(),
+                    ),
+                    BotAction::LeaveChat(channel_name) => protocol::Message::Text(
+                        irc!["PART", format!("#{}", &channel_name)].as_raw_irc(),
+                    ),
+                };
+
+                if let Err(e) = socket_writer.send(message.clone()).await {
+                    log::error!(
+                        target: LOG_TARGET,
+                        "Failed to send a message: MESSAGE => {} | ERROR => {} ",
+                        &message,
+                        &e
+                    );
+                } else {
+                    let channel_list_edition = match action {
+                        BotAction::JoinChat(channel_name) => shared_socket_list
+                            .write()
+                            .and_then(|mut lock| Ok(lock.insert(channel_name.clone()))),
+                        BotAction::LeaveChat(channel_name) => shared_socket_list
+                            .write()
+                            .and_then(|mut lock| Ok(lock.insert(channel_name.clone()))),
+                        _ => Ok(true),
+                    };
+
+                    if let Err(e) = channel_list_edition {
+                        log::error!(target: LOG_TARGET, "Cannot update the channel list :{}", &e);
+                    }
+
+                    log::info!(target: LOG_TARGET, "SENT:{}", &message);
+                }
+            }
+        })
+    }
+
+    fn start_reading(
+        &self,
+        socket_reader: SocketReader,
+        pong_sender: mpsc::Sender<BotAction>,
+        connection_status_sender: mpsc::Sender<bool>,
+    ) -> tokio::task::JoinHandle<()> {
+        tokio::spawn(async move {
+            socket_reader
+                .filter_map(|data| async move {
+                    if let Ok(protocol::Message::Text(text)) = data {
+                        let t = text.clone();
+                        Some(t.lines().map(|l| String::from(l)).collect::<Vec<_>>())
+                    } else {
+                        None
+                    }
+                })
+                .flat_map(|lines| {
+                    stream::iter(
+                        lines
+                            .iter()
+                            .filter_map(|line| {
+                                IRCMessage::parse(line)
+                                    .map_err(AppError::from)
+                                    .and_then(|irc_message| {
+                                        ServerMessage::try_from(irc_message).map_err(AppError::from)
+                                    })
+                                    .ok()
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                })
+                .for_each(|twitch_message| async {
+                    match twitch_message {
+                        ServerMessage::GlobalUserState(_) => {
+                            log::info!(target: LOG_TARGET, "Bot user authenticated");
+
+                            if let Err(e) = connection_status_sender.send(true).await {
+                                log::error!(
+                                    target: LOG_TARGET,
+                                    "Failed to update connexion status: {}",
+                                    &e
+                                );
+                            }
+                        }
+                        ServerMessage::Ping(_) => {
+                            log::info!(target: LOG_TARGET, "PING received");
+
+                            if let Err(e) = pong_sender.send(BotAction::Pong).await {
+                                log::error!(
+                                    target: LOG_TARGET,
+                                    "Failed to respond to PING message: {}",
+                                    &e
+                                );
+                            }
+                        }
+                        unhandled_msg => {
+                            log::info!(
+                                target: LOG_TARGET,
+                                "Unhandled socket message {:?}",
+                                &unhandled_msg
+                            );
+                        }
+                    }
+                })
+                .await
+        })
     }
 }

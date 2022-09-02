@@ -32,8 +32,14 @@ async fn main() -> std::io::Result<()> {
 
     // Twitch bot
     let mut twitch_bot = bot::Bot::new(shared_pool.clone(), app_config.clone());
-
-    twitch_bot.connect().await.unwrap();
+    let bot_connect_result = twitch_bot.connect().await;
+    if let Err(bot_error) = bot_connect_result {
+        log::error!(
+            target: bot::LOG_TARGET,
+            "Initial connection to Twitch socket failed {}",
+            &bot_error
+        );
+    };
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
 

@@ -1,8 +1,8 @@
-use actix_web::{get, patch, web, HttpResponse};
+use actix_web::{get, web, HttpResponse};
 use diesel::OptionalExtension;
 use std::sync::RwLock;
 
-use crate::bot::{Bot, BotMessage, BotStatus};
+use crate::bot::{Bot, BotAction, BotStatus};
 use crate::errors::*;
 use crate::extractors::user_from_cookie::UserFromCookie;
 use crate::models::bot_credentials::{
@@ -10,7 +10,7 @@ use crate::models::bot_credentials::{
 };
 use crate::models::bot_info::{BotInfo, CredentialsState};
 use crate::models::user::get_user_by_username;
-use crate::states::app_config::{self, AppConfig};
+use crate::states::app_config::AppConfig;
 use crate::twitch::id_api::validate_user_token;
 use crate::types::DbPool;
 
@@ -61,11 +61,11 @@ pub async fn get_bot_info(
 
     let connected_to_chat = {
         let connected_channels = bot.connected_channels.clone();
-
-        let lock = connected_channels
-            .lock()
+        let connected_channels = connected_channels
+            .read()
             .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
-        lock.contains(&user.logged.username)
+
+        connected_channels.contains(&user.logged.username)
     };
 
     Ok(HttpResponse::Ok().json(BotInfo {
@@ -88,7 +88,7 @@ pub async fn join_chat(
     match &bot.status() {
         BotStatus::Connected(sender) => {
             sender
-                .send(BotMessage::JoinChat(user.logged.username.clone()))
+                .send(BotAction::JoinChat(user.logged.username.clone()))
                 .await
                 .unwrap();
 
@@ -110,7 +110,7 @@ pub async fn leave_chat(
     match &bot.status() {
         BotStatus::Connected(sender) => {
             sender
-                .send(BotMessage::LeaveChat(user.logged.username.clone()))
+                .send(BotAction::LeaveChat(user.logged.username.clone()))
                 .await
                 .unwrap();
 

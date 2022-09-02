@@ -340,6 +340,7 @@ dependencies = [
  "log",
  "openssl",
  "pct-str",
+ "r2d2",
  "rand",
  "reqwest",
  "serde",
@@ -348,6 +349,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "twitch-irc",
+ "url",
  "uuid",
 ]
 
