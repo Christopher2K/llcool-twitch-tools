@@ -4,7 +4,7 @@ use futures::SinkExt;
 use futures::StreamExt;
 use reqwest::Url;
 use std::collections::HashSet;
-use std::sync::{Arc, RwLock};
+use std::sync::{atomic::AtomicU32, Arc, RwLock};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol, MaybeTlsStream, WebSocketStream};
@@ -33,6 +33,7 @@ pub enum BotAction {
     JoinChat(String),
     LeaveChat(String),
     Pong,
+    VsCodeTrigger,
 }
 
 #[derive(Clone)]
@@ -46,6 +47,9 @@ pub struct Bot {
     pool: Data<DbPool>,
     bot_status: BotStatus,
     pub connected_channels: ChannelSet,
+
+    // TODO: Find a better place for this one
+    pub vsc_counter: Arc<AtomicU32>,
 }
 
 impl Bot {
@@ -55,6 +59,7 @@ impl Bot {
             pool,
             bot_status: BotStatus::Disconnected,
             connected_channels: Arc::new(RwLock::new(HashSet::new())),
+            vsc_counter: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -96,6 +101,7 @@ impl Bot {
 
         // -> Receive boolean messages to tell the struct to update its connection status
         let (tx_connected, mut rx_connected) = mpsc::channel::<bool>(1);
+        let (tx_vsc_counter, mut rx_vsc_counters) = mpsc::channel::<()>(32);
 
         // OPEN TWITCH TMI CONNECTION
         let url = Url::parse(WEBSOCKET_CLIENT_URL)?;
@@ -161,6 +167,7 @@ impl Bot {
         mut bot_action_receiver: mpsc::Receiver<BotAction>,
     ) -> tokio::task::JoinHandle<()> {
         let shared_socket_list = self.connected_channels.clone();
+        let counter_ref = self.vsc_counter.clone();
 
         tokio::spawn(async move {
             while let Some(action) = bot_action_receiver.recv().await {
@@ -172,6 +179,21 @@ impl Bot {
                     BotAction::LeaveChat(channel_name) => protocol::Message::Text(
                         irc!["PART", format!("#{}", &channel_name)].as_raw_irc(),
                     ),
+                    BotAction::VsCodeTrigger => {
+                        let counter = counter_ref.load(std::sync::atomic::Ordering::SeqCst);
+
+                        protocol::Message::Text(
+                            irc![
+                                "PRIVMSG",
+                                "#llcoolchris_",
+                                format!(
+                                    "POUR LA {}eme fois, VISUAL STUDIO CODE PUE SA MERE",
+                                    &counter
+                                )
+                            ]
+                            .as_raw_irc(),
+                        )
+                    }
                 };
 
                 if let Err(e) = socket_writer.send(message.clone()).await {
@@ -205,9 +227,11 @@ impl Bot {
     fn start_reading(
         &self,
         socket_reader: SocketReader,
-        pong_sender: mpsc::Sender<BotAction>,
+        action_sender: mpsc::Sender<BotAction>,
         connection_status_sender: mpsc::Sender<bool>,
     ) -> tokio::task::JoinHandle<()> {
+        let counter_ref = self.vsc_counter.clone();
+
         tokio::spawn(async move {
             socket_reader
                 .filter_map(|data| async move {
@@ -249,13 +273,38 @@ impl Bot {
                         ServerMessage::Ping(_) => {
                             log::info!(target: LOG_TARGET, "PING received");
 
-                            if let Err(e) = pong_sender.send(BotAction::Pong).await {
+                            if let Err(e) = action_sender.send(BotAction::Pong).await {
                                 log::error!(
                                     target: LOG_TARGET,
                                     "Failed to respond to PING message: {}",
                                     &e
                                 );
                             }
+                        }
+                        ServerMessage::Privmsg(msg) => {
+                            log::info!(
+                                target: LOG_TARGET,
+                                "{:?} || contains vsc {}",
+                                &msg.message_text,
+                                &msg.message_text.contains("vsc")
+                            );
+
+                            if msg
+                                .message_text
+                                .to_lowercase()
+                                .replace(" ", "")
+                                .contains("vsc")
+                            {
+                                counter_ref.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+                                if let Err(e) = action_sender.send(BotAction::VsCodeTrigger).await {
+                                    log::error!(
+                                        target: LOG_TARGET,
+                                        "Cannot respond to request {}",
+                                        &e
+                                    );
+                                };
+                            };
                         }
                         unhandled_msg => {
                             log::info!(
