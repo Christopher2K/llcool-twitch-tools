@@ -58,18 +58,10 @@ const botInfoApiValidator = z.object({
 
 type BotInfoApi = z.infer<typeof botInfoApiValidator>
 
-export async function getBotInfo(
-  fetchFn = fetch,
-  cookie: string | undefined = undefined,
-): Promise<BotInfoApi> {
-  const response = await fetchFn(
-    `${apiUrl}/bot/info`,
-    cookie == null
-      ? {
-          credentials: 'include',
-        }
-      : { headers: { cookie } },
-  )
+export async function getBotInfo(fetchFn = fetch): Promise<BotInfoApi> {
+  const response = await fetchFn(`${apiUrl}/bot/info`, {
+    credentials: 'include'
+  })
 
   if (!response.ok) {
     handleHttpError(response)
@@ -93,6 +85,8 @@ export async function askBotToLeaveChat(): Promise<void> {
   const response = await fetch(`${apiUrl}/bot/leave`, {
     credentials: 'include',
   })
+
+  console.log(response.headers)
 
   if (!response.ok) {
     handleHttpError(response)

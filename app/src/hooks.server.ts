@@ -1,6 +1,6 @@
-import type { Handle } from '@sveltejs/kit'
+import type { Handle, HandleFetch } from '@sveltejs/kit'
 
-import { chatBotUsername } from '@app/env'
+import { chatBotUsername, apiUrl, appUrl } from '@app/env'
 import { getUserData } from '@app/api'
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -19,4 +19,13 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   return resolve(event)
+}
+
+export const handleFetch: HandleFetch = async ({ request, fetch }) => {
+  if (request.url.startsWith(apiUrl)) {
+    // Workaround: https://github.com/sveltejs/kit/issues/6608
+    request.headers.set('origin', appUrl)
+  }
+
+  return fetch(request)
 }
