@@ -4,20 +4,24 @@
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
 
   type Command = {
+    id: string
     name: string
     message: string
   }
 
   const fakeCommands: Command[] = [
     {
+      id: '1',
       name: 'vsc',
       message: 'Fuck visual studio code',
     },
     {
+      id: '2',
       name: 'intellij',
       message: 'Eat up your ram cuz the JVM is broken by design',
     },
     {
+      id: '3',
       name: 'vim',
       message: 'Use nvim old ass',
     },
@@ -25,14 +29,28 @@
 
   // State
   let deleteConfirmationModalOpen = false
+  let commandIdToDelete: string | undefined = undefined
+
+  // Reactive
+  $: commandToDelete = fakeCommands.find(c => c.id === commandIdToDelete)
+  $: confirmationModalDeleteMessage = commandToDelete
+    ? `Are you sure to delete the command ${commandToDelete.name} ?`
+    : ''
 
   // Callback
-  function openDeleteConfirmationModal() {
+  function openDeleteConfirmationModal(commandId: string) {
     deleteConfirmationModalOpen = true
+    commandIdToDelete = commandId
   }
 
   function closeDeleteConfirmationModal() {
     deleteConfirmationModalOpen = false
+    commandIdToDelete = undefined
+  }
+
+  function deleteCommand() {
+    console.log('Deleting command ', commandIdToDelete)
+    closeDeleteConfirmationModal()
   }
 </script>
 
@@ -57,7 +75,10 @@
         <td>{command.message}</td>
         <td class="actions">
           <Button label="Edit" />
-          <Button label="Delete" on:click={openDeleteConfirmationModal} />
+          <Button
+            label="Delete"
+            on:click={() => openDeleteConfirmationModal(command.id)}
+          />
         </td>
       </tr>
     {/each}
@@ -66,6 +87,9 @@
 
 <ConfirmationModal
   open={deleteConfirmationModalOpen}
+  confirmationButtonLabel="Delete"
+  title={confirmationModalDeleteMessage}
+  on:confirm={deleteCommand}
   on:close={closeDeleteConfirmationModal}
 />
 

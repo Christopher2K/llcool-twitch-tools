@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-  export type ButtonTheme = 'primary'
+  export type ButtonTheme = 'primary' | 'danger'
 </script>
 
 <script lang="ts">
@@ -7,6 +7,7 @@
   export let isLoading: boolean = false
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
+
   let className: string = ''
   export { className as class }
 </script>
@@ -41,5 +42,11 @@
   .primary {
     background-color: $white;
     color: $primary_dark;
+  }
+
+  .danger {
+    border-color: $danger_dark;
+    background-color: $danger_dark;
+    color: $white;
   }
 </style>
