@@ -2,6 +2,7 @@
   import Button from '@app/components/Button.svelte'
   import Typography from '@app/components/Typography.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
+  import CommandFormModal from '@app/components/CommandFormModal.svelte'
 
   type Command = {
     id: string
@@ -29,6 +30,7 @@
 
   // State
   let deleteConfirmationModalOpen = false
+  let commandFormModalOpen = false
   let commandIdToDelete: string | undefined = undefined
 
   // Reactive
@@ -48,6 +50,14 @@
     commandIdToDelete = undefined
   }
 
+  function openCommandFormModal() {
+    commandFormModalOpen = true
+  }
+
+  function closeCommandFormModal() {
+    commandFormModalOpen = false
+  }
+
   function deleteCommand() {
     console.log('Deleting command ', commandIdToDelete)
     closeDeleteConfirmationModal()
@@ -59,7 +69,7 @@
 <section>
   <header class="mb-3">
     <Typography tag="h2">Your commands</Typography>
-    <Button label="Add new command" />
+    <Button label="Add new command" on:click={openCommandFormModal} />
   </header>
 
   <table>
@@ -92,6 +102,8 @@
   on:confirm={deleteCommand}
   on:close={closeDeleteConfirmationModal}
 />
+
+<CommandFormModal />
 
 <style lang="scss">
   @import 'theme';
