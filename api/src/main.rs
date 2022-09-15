@@ -42,18 +42,10 @@ async fn main() -> std::io::Result<()> {
     };
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
+    let is_local_app = app_config.app_env == "local";
 
-    // SSL config
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder
-        .set_certificate_chain_file("../localhost.pem")
-        .unwrap();
-
-    HttpServer::new(move || {
-        // Cors
+    // CORS
+    let app = move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
@@ -89,8 +81,25 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
-    })
-    .bind_openssl("localhost:8080", builder)?
-    .run()
-    .await
+    };
+
+    // START LOCAL APP
+    let server = if is_local_app {
+        // SSL config
+        let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        builder
+            .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
+            .unwrap();
+        builder
+            .set_certificate_chain_file("../localhost.pem")
+            .unwrap();
+
+        HttpServer::new(app)
+            .bind_openssl("localhost:8080", builder)?
+            .run()
+    } else {
+        HttpServer::new(app).bind("0.0.0.0:8080")?.run()
+    };
+
+    server.await
 }
