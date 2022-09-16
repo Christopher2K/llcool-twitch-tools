@@ -8,7 +8,7 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use api::{bot, routes, states};
 
-use std::{env, fmt::format, sync::RwLock};
+use std::{env, sync::RwLock};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
