@@ -42,23 +42,17 @@ async fn main() -> std::io::Result<()> {
     };
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
+    let is_local_app = matches!(app_config.app_env, states::app_config::AppEnv::Local);
 
-    // SSL config
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder
-        .set_certificate_chain_file("../localhost.pem")
-        .unwrap();
-
-    HttpServer::new(move || {
-        // Cors
+    // CORS
+    let app = move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
+
+        let cookie_domain = format!(".{}", app_config.domain.clone());
 
         App::new()
             .app_data(shared_pool.clone())
@@ -67,10 +61,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(shared_twitch_bot.clone())
             .wrap(cors)
             .wrap(Logger::default())
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                cookie_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
+                    .cookie_domain(Some(cookie_domain))
+                    .build(),
+            )
             .service(
                 web::scope("/api")
                     .service(
@@ -89,8 +84,25 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
-    })
-    .bind_openssl("localhost:8080", builder)?
-    .run()
-    .await
+    };
+
+    // START LOCAL APP
+    let server = if is_local_app {
+        // SSL config
+        let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        builder
+            .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
+            .unwrap();
+        builder
+            .set_certificate_chain_file("../localhost.pem")
+            .unwrap();
+
+        HttpServer::new(app)
+            .bind_openssl("localhost:8080", builder)?
+            .run()
+    } else {
+        HttpServer::new(app).bind("0.0.0.0:8080")?.run()
+    };
+
+    server.await
 }
