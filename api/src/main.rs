@@ -8,7 +8,7 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use api::{bot, routes, states};
 
-use std::{env, sync::RwLock};
+use std::{env, fmt::format, sync::RwLock};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,7 +42,7 @@ async fn main() -> std::io::Result<()> {
     };
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
-    let is_local_app = app_config.app_env == "local";
+    let is_local_app = matches!(app_config.app_env, states::app_config::AppEnv::Local);
 
     // CORS
     let app = move || {
@@ -52,6 +52,8 @@ async fn main() -> std::io::Result<()> {
             .allow_any_header()
             .supports_credentials();
 
+        let cookie_domain = format!(".{}", app_config.domain.clone());
+
         App::new()
             .app_data(shared_pool.clone())
             .app_data(twitch_app_credentials.clone())
@@ -59,10 +61,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(shared_twitch_bot.clone())
             .wrap(cors)
             .wrap(Logger::default())
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                cookie_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
+                    .cookie_domain(Some(cookie_domain))
+                    .build(),
+            )
             .service(
                 web::scope("/api")
                     .service(
