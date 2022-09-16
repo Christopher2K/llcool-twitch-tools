@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     bot_credentials (id) {
         id -> Text,
         access_token -> Text,
@@ -7,7 +9,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     users (id) {
         id -> Text,
         username -> Text,
@@ -15,9 +17,9 @@ table! {
     }
 }
 
-joinable!(bot_credentials -> users (user_id));
+diesel::joinable!(bot_credentials -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     bot_credentials,
     users,
 );
