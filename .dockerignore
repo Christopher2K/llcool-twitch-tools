@@ -1,0 +1,9 @@
+app/build
+app/node_modules
+app/certs
+app/.pnpm-store
+api/target
+api/target_docker
+
+.git
+docker/

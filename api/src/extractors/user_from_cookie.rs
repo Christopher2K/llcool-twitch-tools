@@ -40,7 +40,7 @@ impl FromRequest for UserFromCookie {
                 .app_data::<web::Data<AppConfig>>()
                 .expect("Cannot get the app config!!!");
 
-            let db = request
+            let mut db = request
                 .app_data::<web::Data<DbPool>>()
                 .expect("Cannot get db pool config")
                 .get()
@@ -70,7 +70,7 @@ impl FromRequest for UserFromCookie {
                     let user_session_clone = user_session.clone();
 
                     let db_user =
-                        get_user_by_username(&db, &user_session_clone.username).map_err(|e| {
+                        get_user_by_username(&mut db, &user_session_clone.username).map_err(|e| {
                             session.remove(&SessionKey::User.as_str());
                             AppError::new(Some(AppErrorType::DatabaseError))
                                 .inner_error(&e.to_string())

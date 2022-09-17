@@ -1,2 +1,10 @@
 localhost.pem
 localhost-key.pem
+api/certs
+app/certs
+app/.pnpm-store
+docker/nginx/ssl
+docker/data
+api/.env
+api/target
+api/target_docker

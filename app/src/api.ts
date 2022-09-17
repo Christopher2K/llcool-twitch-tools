@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 import { ErrorType } from '@app/error'
-import { apiUrl } from '@app/env'
+import { PUBLIC_API_URL } from '$env/static/public'
 
-export const LOGIN_URL = `${apiUrl}/auth/login`
-export const LOGOUT_URL = `${apiUrl}/auth/logout`
+export const LOGIN_URL = `${PUBLIC_API_URL}/auth/login`
+export const LOGOUT_URL = `${PUBLIC_API_URL}/auth/logout`
 
 function handleHttpError(response: Response): never {
   let error = new Error(ErrorType.ServerError)
@@ -33,7 +33,7 @@ export async function getUserData(
   cookie: string | undefined = undefined,
 ): Promise<UserApi> {
   const response = await fetch(
-    `${apiUrl}/auth/me`,
+    `${PUBLIC_API_URL}/auth/me`,
     cookie == null
       ? {
           credentials: 'include',
@@ -59,7 +59,7 @@ const botInfoApiValidator = z.object({
 type BotInfoApi = z.infer<typeof botInfoApiValidator>
 
 export async function getBotInfo(fetchFn = fetch): Promise<BotInfoApi> {
-  const response = await fetchFn(`${apiUrl}/bot/info`, {
+  const response = await fetchFn(`${PUBLIC_API_URL}/bot/info`, {
     credentials: 'include'
   })
 
@@ -72,7 +72,7 @@ export async function getBotInfo(fetchFn = fetch): Promise<BotInfoApi> {
 }
 
 export async function askBotToJoinChat(): Promise<void> {
-  const response = await fetch(`${apiUrl}/bot/join`, {
+  const response = await fetch(`${PUBLIC_API_URL}/bot/join`, {
     credentials: 'include',
   })
 
@@ -82,11 +82,9 @@ export async function askBotToJoinChat(): Promise<void> {
 }
 
 export async function askBotToLeaveChat(): Promise<void> {
-  const response = await fetch(`${apiUrl}/bot/leave`, {
+  const response = await fetch(`${PUBLIC_API_URL}/bot/leave`, {
     credentials: 'include',
   })
-
-  console.log(response.headers)
 
   if (!response.ok) {
     handleHttpError(response)
@@ -94,7 +92,7 @@ export async function askBotToLeaveChat(): Promise<void> {
 }
 
 export async function connectBotToTwitch(): Promise<void> {
-  const response = await fetch(`${apiUrl}/bot/connect`, {
+  const response = await fetch(`${PUBLIC_API_URL}/bot/connect`, {
     credentials: 'include',
   })
 

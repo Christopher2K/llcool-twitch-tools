@@ -1,0 +1,55 @@
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - 443:443
+    restart: always
+    networks:
+      default:
+        aliases:
+          - api.twitchtools.local
+          - app.twitchtools.local
+    volumes:
+      - ./docker/nginx/conf:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+
+  frontend:
+    container_name: app-dev
+    env_file: ./app/.env.development
+    build:
+      context: .
+      dockerfile: docker/pnpm.Dockerfile
+    environment:
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+      - /app/.pnpm-stores
+    command: sh -c 'pnpm i && pnpm run dev --host'
+
+  backend:
+    container_name: api-dev
+    build:
+      context: .
+      dockerfile: docker/cargo.Dockerfile
+    env_file: ./api/.env
+    environment:
+      WAIT_HOSTS: database:5432
+      DATABASE_URL: postgres://llcooldb:llcoollocal@database:5432/twitch_tools
+      RUST_LOG: actix_web=error,actix_web=info,twitch_bot
+    volumes:
+      - ./api:/api
+      - /api/target
+    depends_on:
+      - database
+    command: bash -c '/wait && cargo watch -x "run --bin api"'
+
+  database:
+    container_name: db-dev
+    image: postgres:14.5-alpine
+    env_file: ./api/.env
+    ports:
+      - 5432:5432
+    volumes:
+      - ./docker/data/pgsql:/var/lib/postgresql/data

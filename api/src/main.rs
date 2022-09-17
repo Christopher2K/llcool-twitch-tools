@@ -1,19 +1,20 @@
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
+use diesel::pg::PgConnection;
 use diesel::r2d2;
-use diesel::sqlite::SqliteConnection;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use api::{bot, routes, states};
 
-use std::{env, sync::RwLock};
+use std::{env, fmt::format, sync::RwLock};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init();
+
     let database_url = env::var("DATABASE_URL").expect("Missing database url");
     let secret_key = env::var("SECRET_KEY").expect("Missing backend secret key");
     let cookie_key = Key::from(secret_key.as_bytes());
@@ -24,7 +25,7 @@ async fn main() -> std::io::Result<()> {
         states::twitch_credentials::TwitchClientCredentials::new(&app_config).await,
     ));
 
-    let manager = r2d2::ConnectionManager::<SqliteConnection>::new(&database_url);
+    let manager = r2d2::ConnectionManager::<PgConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool");
@@ -43,6 +44,8 @@ async fn main() -> std::io::Result<()> {
 
     let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
     let is_local_app = matches!(app_config.app_env, states::app_config::AppEnv::Local);
+    let port = env::var("PORT").unwrap_or(String::from("8080"));
+    let address = format!("0.0.0.0:{}", port);
 
     // CORS
     let app = move || {
@@ -52,7 +55,7 @@ async fn main() -> std::io::Result<()> {
             .allow_any_header()
             .supports_credentials();
 
-        let cookie_domain = format!(".{}", app_config.domain.clone());
+        let cookie_domain = Some(format!(".{}", app_config.domain.clone()));
 
         App::new()
             .app_data(shared_pool.clone())
@@ -63,7 +66,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
-                    .cookie_domain(Some(cookie_domain))
+                    .cookie_domain(cookie_domain)
                     .build(),
             )
             .service(
@@ -91,17 +94,18 @@ async fn main() -> std::io::Result<()> {
         // SSL config
         let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
         builder
-            .set_private_key_file("../localhost-key.pem", SslFiletype::PEM)
+            .set_private_key_file(
+                "./certs/_wildcard.twitchtools.local-key.pem",
+                SslFiletype::PEM,
+            )
             .unwrap();
         builder
-            .set_certificate_chain_file("../localhost.pem")
+            .set_certificate_chain_file("./certs/_wildcard.twitchtools.local.pem")
             .unwrap();
 
-        HttpServer::new(app)
-            .bind_openssl("localhost:8080", builder)?
-            .run()
+        HttpServer::new(app).bind_openssl(address, builder)?.run()
     } else {
-        HttpServer::new(app).bind("0.0.0.0:8080")?.run()
+        HttpServer::new(app).bind(address)?.run()
     };
 
     server.await

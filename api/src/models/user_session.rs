@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::user::User;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserSession {
-    pub id: String,
+    pub id: Uuid,
     pub username: String,
     pub access_token: String,
     pub refresh_token: String,

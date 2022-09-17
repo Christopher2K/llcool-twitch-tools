@@ -76,15 +76,15 @@ impl Bot {
                 target: LOG_TARGET,
                 "Getting and refreshing bot credentials..."
             );
-            let db = self.pool.get()?;
+            let mut db = self.pool.get()?;
 
             // RENEW BY DEFAULT THE TWITCH BOT TOKEN
-            let credentials = get_user_by_username(&db, &bot_username)
-                .and_then(|user| get_bot_credentials_by_user_id(&db, &user.id))?;
+            let credentials = get_user_by_username(&mut db, &bot_username)
+                .and_then(|user| get_bot_credentials_by_user_id(&mut db, &user.id))?;
 
             let tokens = renew_token(&self.app_config, &credentials.refresh_token).await?;
             update_bot_credentials(
-                &db,
+                &mut db,
                 &credentials.id,
                 UpdateBotCredentials {
                     access_token: &tokens.access_token.clone(),

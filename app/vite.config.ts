@@ -14,9 +14,14 @@ export default defineConfig(({ command }) => {
     return {
       ...commonConfig,
       server: {
+        hmr: {
+           path: '/_hmr',
+           port: 443
+        },
+
         https: {
-          cert: readFileSync(`${__dirname}/../localhost.pem`),
-          key: readFileSync(`${__dirname}/../localhost-key.pem`),
+          cert: readFileSync(`${__dirname}/certs/_wildcard.twitchtools.local.pem`),
+          key: readFileSync(`${__dirname}/certs/_wildcard.twitchtools.local-key.pem`),
         },
       },
     }

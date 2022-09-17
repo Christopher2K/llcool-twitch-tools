@@ -63,14 +63,14 @@ pub async fn get_twitch_access_token(
 
         session
             .get::<String>(&SessionKey::OAuthState.as_str())
-            .map_err(|_| error.clone())
+            .map_err(|e| error.clone())
             .and_then(|mb_state| match mb_state {
                 Some(state) => Ok(state),
                 None => Err(error.clone()),
             })
     }?;
 
-    let db = pool.get()?;
+    let mut db = pool.get()?;
 
     let base_oauth_error = AppError::new(Some(AppErrorType::OAuthStateError));
     let base_twitch_request_error = AppError::new(Some(AppErrorType::TwitchApiError));
@@ -103,7 +103,7 @@ pub async fn get_twitch_access_token(
                 })?;
 
             let db_user = get_or_create_user(
-                &db,
+                &mut db,
                 CreateUser {
                     username: user_profile.login.clone(),
                     twitch_id: user_profile.id,
@@ -117,7 +117,7 @@ pub async fn get_twitch_access_token(
 
             if user_profile.login == app_config.chat_bot_username {
                 get_or_create_bot_credentials(
-                    &db,
+                    &mut db,
                     CreateBotCredentials {
                         access_token: tokens.access_token.clone(),
                         refresh_token: tokens.refresh_token.clone(),
@@ -126,7 +126,7 @@ pub async fn get_twitch_access_token(
                 )
                 .and_then(|credentials| {
                     update_bot_credentials(
-                        &db,
+                        &mut db,
                         &credentials.id,
                         UpdateBotCredentials {
                             access_token: &tokens.access_token,

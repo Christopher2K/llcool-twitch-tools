@@ -9,7 +9,6 @@ pub mod states;
 pub mod twitch;
 pub mod types;
 
-#[macro_use]
 extern crate diesel;
 
 extern crate derive_more;

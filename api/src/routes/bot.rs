@@ -25,17 +25,17 @@ pub async fn get_bot_info(
         .read()
         .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
 
-    let db = db
+    let mut db = db
         .get()
         .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
     let name = app_config.chat_bot_username.clone();
     let connected = matches!(bot.status(), BotStatus::Connected(_));
 
-    let mb_credentials = get_user_by_username(&db, &name)
+    let mb_credentials = get_user_by_username(&mut db, &name)
         .optional()
         .and_then(|mb_bot_user| {
             if let Some(bot_user) = mb_bot_user {
-                get_bot_credentials_by_user_id(&db, &bot_user.id.clone()).optional()
+                get_bot_credentials_by_user_id(&mut db, &bot_user.id.clone()).optional()
             } else {
                 Ok(None)
             }
@@ -127,7 +127,7 @@ pub async fn connect(
     db: web::Data<DbPool>,
     bot: web::Data<RwLock<Bot>>,
 ) -> Result<HttpResponse, AppError> {
-    let db = db
+    let mut db = db
         .get()
         .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
 
@@ -142,13 +142,13 @@ pub async fn connect(
             BotStatus::Connected(_) => Ok(HttpResponse::Ok().finish()),
             BotStatus::Disconnected => {
                 // Ensure that bot credentials does exist
-                let mb_credentials = get_bot_credentials_by_user_id(&db, &user.logged.id);
+                let mb_credentials = get_bot_credentials_by_user_id(&mut db, &user.logged.id);
                 let credentials_missing =
                     matches!(mb_credentials, Err(diesel::result::Error::NotFound));
 
                 if credentials_missing {
                     create_bot_credentials(
-                        &db,
+                        &mut db,
                         &CreateBotCredentials {
                             access_token: user.session.access_token.clone(),
                             refresh_token: user.session.refresh_token.clone(),

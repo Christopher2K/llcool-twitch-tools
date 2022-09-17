@@ -2,18 +2,18 @@
 
 diesel::table! {
     bot_credentials (id) {
-        id -> Text,
-        access_token -> Text,
-        refresh_token -> Text,
-        user_id -> Text,
+        id -> Uuid,
+        access_token -> Varchar,
+        refresh_token -> Varchar,
+        user_id -> Nullable<Uuid>,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Text,
-        username -> Text,
-        twitch_id -> Text,
+        id -> Uuid,
+        username -> Varchar,
+        twitch_id -> Varchar,
     }
 }
 

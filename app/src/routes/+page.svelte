@@ -39,7 +39,7 @@
         {#if isBot}
           <Button href="/bot" label="Go to bot dashboard" />
         {:else}
-          <Button href="/app" label="Go to dashboard" />
+          <Button href="/user" label="Go to dashboard" />
         {/if}
         <Button href={LOGOUT_URL} label="Logout" />
       {/if}

@@ -5,8 +5,8 @@
 
 <DashboardLayout title="Twitch Tools">
   <svelte:fragment slot="links">
-    <SideMenuItem href="/app" label="Dashboard" />
-    <SideMenuItem href="/app/commands" label="Commands" />
+    <SideMenuItem href="/user" label="Dashboard" />
+    <SideMenuItem href="/user/commands" label="Commands" />
   </svelte:fragment>
 
   <svelte:fragment slot="content">

@@ -7,6 +7,7 @@ declare namespace App {
     user?: import('@app/models').User,
     isBotUser?: boolean
   }
+
   // interface Platform {}
   // interface Session {}
   // interface Stuff {}

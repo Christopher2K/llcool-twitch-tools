@@ -7,7 +7,7 @@ use crate::schema::users;
 #[derive(Queryable, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
-    pub id: String,
+    pub id: Uuid,
     pub username: String,
     pub twitch_id: String,
 }
@@ -15,7 +15,6 @@ pub struct User {
 #[derive(Insertable)]
 #[table_name = "users"]
 pub struct NewUser<'a> {
-    pub id: &'a str,
     pub username: &'a str,
     pub twitch_id: &'a str,
 }
@@ -26,7 +25,7 @@ pub struct CreateUser {
 }
 
 pub fn get_user_by_username(
-    db: &SqliteConnection,
+    db: &mut PgConnection,
     username: &str,
 ) -> Result<User, diesel::result::Error> {
     users::table
@@ -34,33 +33,25 @@ pub fn get_user_by_username(
         .first::<User>(db)
 }
 
-pub fn get_user_by_id(
-    db: &SqliteConnection,
-    username: &str,
-) -> Result<User, diesel::result::Error> {
-    users::table.find(username).get_result::<User>(db)
+pub fn get_user_by_id(db: &mut PgConnection, id: &Uuid) -> Result<User, diesel::result::Error> {
+    users::table.find(id).get_result::<User>(db)
 }
 
-pub fn create_user(
-    db: &SqliteConnection,
-    user: &CreateUser,
-) -> Result<User, diesel::result::Error> {
-    let uuid = format!("{}", Uuid::new_v4());
+pub fn create_user(db: &mut PgConnection, user: &CreateUser) -> Result<User, diesel::result::Error> {
     let new_user = NewUser {
-        id: &uuid,
         username: &user.username,
         twitch_id: &user.twitch_id,
     };
 
     diesel::insert_into(users::table)
         .values(&new_user)
-        .execute(db)
-        .expect("Cannot insert new user");
-
-    users::table.find(&uuid).get_result::<User>(db)
+        .get_result(db)
 }
 
-pub fn get_or_create_user(db: &SqliteConnection, user: CreateUser) -> Result<User, diesel::result::Error> {
+pub fn get_or_create_user(
+    db: &mut PgConnection,
+    user: CreateUser,
+) -> Result<User, diesel::result::Error> {
     let maybe_user = get_user_by_username(db, &user.username);
 
     match maybe_user {
