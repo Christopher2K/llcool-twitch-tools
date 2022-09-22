@@ -20,20 +20,15 @@
     }
   }
 
-// Callbacks
-  function dispatchCloseEvent() {
+  // Callback
+  function onDialogClick() {
     dispatch('close')
   }
-
-  // Exported functions
-  export function getElement() {
-    return dialogElement
-  }
-
-
 </script>
 
-<dialog class="p-3" bind:this={dialogElement}><slot /></dialog>
+<dialog on:click|self={onDialogClick} class="p-3" bind:this={dialogElement}>
+  <slot />
+</dialog>
 
 <style lang="scss">
   @import 'theme';

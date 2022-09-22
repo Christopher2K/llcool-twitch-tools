@@ -14,20 +14,6 @@
   export let message: string | undefined = undefined
   export let confirmationButtonLabel: string = 'Confirm'
 
-  // Binding
-  let rootModalComponent: RootModal
-
-  // Reactive
-  $: {
-    if (rootModalComponent) {
-      if (open) {
-        rootModalComponent.getElement().showModal()
-      } else {
-        rootModalComponent.getElement().close()
-      }
-    }
-  }
-
   // Callbacks
   function dispatchCloseEvent() {
     dispatch('close')
@@ -39,23 +25,25 @@
 </script>
 
 <div use:portal={'body'}>
-  <RootModal bind:this={rootModalComponent}>
-    {#if title}
-      <header class="mb-3">
-        <Typography tag="h3">{title}</Typography>
-      </header>
-    {/if}
+  <RootModal on:close {open}>
+    <div>
+      {#if title}
+        <header class="mb-3">
+          <Typography tag="h3">{title}</Typography>
+        </header>
+      {/if}
 
-    {#if message}
-      <div class="mb-3">
-        <Typography>{message}</Typography>
-      </div>
-    {/if}
+      {#if message}
+        <div class="mb-3">
+          <Typography>{message}</Typography>
+        </div>
+      {/if}
 
-    <footer>
-      <Button label={confirmationButtonLabel} on:click={dispatchConfirmEvent} />
-      <Button label="Close" theme="danger" on:click={dispatchCloseEvent} />
-    </footer>
+      <footer>
+        <Button label={confirmationButtonLabel} on:click={dispatchConfirmEvent} />
+        <Button label="Close" theme="danger" on:click={dispatchCloseEvent} />
+      </footer>
+    </div>
   </RootModal>
 </div>
 
