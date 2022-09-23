@@ -3,12 +3,7 @@
   import Typography from '@app/components/Typography.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
   import CommandFormModal from '@app/components/CommandFormModal.svelte'
-
-  type Command = {
-    id: string
-    name: string
-    message: string
-  }
+  import type { Command } from '@app/models'
 
   const fakeCommands: Command[] = [
     {
@@ -31,36 +26,41 @@
   // State
   let deleteConfirmationModalOpen = false
   let commandFormModalOpen = false
-  let commandIdToDelete: string | undefined = undefined
+  let selectedCommand: Command | undefined = undefined
 
   // Reactive
-  $: commandToDelete = fakeCommands.find(c => c.id === commandIdToDelete)
-  $: confirmationModalDeleteMessage = commandToDelete
-    ? `Are you sure to delete the command ${commandToDelete.name} ?`
+  $: confirmationModalDeleteMessage = selectedCommand
+    ? `Are you sure to delete the command ${selectedCommand.name} ?`
     : ''
 
   // Callback
-  function openDeleteConfirmationModal(commandId: string) {
+  function openDeleteConfirmationModal(command: Command) {
     deleteConfirmationModalOpen = true
-    commandIdToDelete = commandId
+    selectedCommand = command
   }
 
   function closeDeleteConfirmationModal() {
     deleteConfirmationModalOpen = false
-    commandIdToDelete = undefined
+    selectedCommand = undefined
   }
 
-  function openCommandFormModal() {
+  function openCommandFormModal(command: Command | undefined = undefined) {
+    selectedCommand = command
     commandFormModalOpen = true
   }
 
   function closeCommandFormModal() {
     commandFormModalOpen = false
+    selectedCommand = undefined
   }
 
   function deleteCommand() {
-    console.log('Deleting command ', commandIdToDelete)
+    console.log('Deleting command ', selectedCommand)
     closeDeleteConfirmationModal()
+  }
+
+  function onConfirmFormModal(event: CustomEvent<{ id?: string; command: Omit<Command, 'id'> }>) {
+    console.log(event.detail)
   }
 </script>
 
@@ -69,7 +69,7 @@
 <section>
   <header class="mb-3">
     <Typography tag="h2">Your commands</Typography>
-    <Button label="Add new command" on:click={openCommandFormModal} />
+    <Button label="Add new command" on:click={() => openCommandFormModal()} />
   </header>
 
   <table>
@@ -84,11 +84,8 @@
         <td>{command.name}</td>
         <td>{command.message}</td>
         <td class="actions">
-          <Button label="Edit" />
-          <Button
-            label="Delete"
-            on:click={() => openDeleteConfirmationModal(command.id)}
-          />
+          <Button label="Edit" on:click={() => openCommandFormModal(command)} />
+          <Button label="Delete" on:click={() => openDeleteConfirmationModal(command)} />
         </td>
       </tr>
     {/each}
@@ -103,7 +100,12 @@
   on:close={closeDeleteConfirmationModal}
 />
 
-<CommandFormModal />
+<CommandFormModal
+  open={commandFormModalOpen}
+  command={selectedCommand}
+  on:confirm={onConfirmFormModal}
+  on:close={closeCommandFormModal}
+/>
 
 <style lang="scss">
   @import 'theme';
