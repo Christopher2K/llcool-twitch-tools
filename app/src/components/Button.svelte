@@ -7,6 +7,7 @@
   export let isLoading: boolean = false
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
+  export let type: HTMLButtonElement['type'] = 'button'
 
   let className: string = ''
   export { className as class }
@@ -15,7 +16,7 @@
 {#if href}
   <a {href} class="{className} {theme}">{label}</a>
 {:else}
-  <button disabled={isLoading} on:click class="{className} {theme}">
+  <button {type} disabled={isLoading} on:click class="{className} {theme}">
     {isLoading ? 'Loading...' : label}
   </button>
 {/if}
