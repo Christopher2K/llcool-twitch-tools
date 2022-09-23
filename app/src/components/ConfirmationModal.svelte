@@ -5,6 +5,8 @@
   import RootModal from './RootModal.svelte'
   import Button from './Button.svelte'
   import Typography from './Typography.svelte'
+  import ModalHeader from './ModalHeader.svelte'
+  import ModalFooter from './ModalFooter.svelte'
 
   const dispatch = createEventDispatcher()
 
@@ -28,9 +30,9 @@
   <RootModal on:close {open}>
     <div>
       {#if title}
-        <header class="mb-3">
+        <ModalHeader>
           <Typography tag="h3">{title}</Typography>
-        </header>
+        </ModalHeader>
       {/if}
 
       {#if message}
@@ -39,24 +41,11 @@
         </div>
       {/if}
 
-      <footer>
+      <ModalFooter>
         <Button label={confirmationButtonLabel} on:click={dispatchConfirmEvent} />
         <Button label="Close" theme="danger" on:click={dispatchCloseEvent} />
-      </footer>
+      </ModalFooter>
     </div>
   </RootModal>
 </div>
 
-<style lang="scss">
-  @import 'theme';
-
-  footer {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
-    align-items: flex-start;
-    flex-wrap: wrap;
-
-    column-gap: $space_xxs;
-  }
-</style>
