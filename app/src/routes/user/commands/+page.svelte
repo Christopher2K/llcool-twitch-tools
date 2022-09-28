@@ -59,7 +59,9 @@
     closeDeleteConfirmationModal()
   }
 
-  function onConfirmFormModal(event: CustomEvent<{ id?: string; command: Omit<Command, 'id'> }>) {
+  function onConfirmFormModal(
+    event: CustomEvent<{ id?: string; command: Omit<Command, 'id'> }>,
+  ) {
     console.log(event.detail)
   }
 </script>
@@ -81,11 +83,23 @@
 
     {#each fakeCommands as command}
       <tr>
-        <td>{command.name}</td>
-        <td>{command.message}</td>
+        <td>
+          <span class="label">Name</span>
+          <span class="value">{command.name}</span>
+        </td>
+        <td>
+          <span class="label">Message</span>
+          <span class="value">{command.message}</span>
+        </td>
         <td class="actions">
-          <Button label="Edit" on:click={() => openCommandFormModal(command)} />
-          <Button label="Delete" on:click={() => openDeleteConfirmationModal(command)} />
+          <span class="label">Actions</span>
+          <span>
+            <Button label="Edit" on:click={() => openCommandFormModal(command)} />
+            <Button
+              label="Delete"
+              on:click={() => openDeleteConfirmationModal(command)}
+            />
+          </span>
         </td>
       </tr>
     {/each}
@@ -109,11 +123,19 @@
 
 <style lang="scss">
   @import 'theme';
+  @import 'responsive';
 
   header {
     display: inline-grid;
-    grid-template-columns: auto auto;
-    column-gap: 1rem;
+    gap: 1rem;
+
+    @include desktopStyle {
+      grid-template-columns: auto auto;
+    }
+
+    @include mobileStyle {
+      grid-template-rows: auto auto;
+    }
   }
 
   table {
@@ -122,7 +144,20 @@
 
   tr {
     display: grid;
-    grid-template-columns: 10rem auto 10rem;
+
+    @include desktopStyle {
+      grid-template-columns: 5rem auto 10rem;
+    }
+
+    @include mobileStyle {
+      grid-template-rows: auto auto auto;
+    }
+
+    &:first-of-type {
+      @include mobileStyle {
+        display: none;
+      }
+    }
   }
 
   th,
@@ -131,15 +166,33 @@
     padding: $space_xxs $space_xs;
   }
 
-  .actions {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-wrap: wrap;
+  td {
+    @include mobileStyle {
+      display: grid;
+      grid-template-columns: 6rem auto;
+    }
 
-    :global button {
-      margin-right: $space_xs;
+    .label {
+      display: none;
+
+      @include mobileStyle {
+        display: block;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .actions {
+    @include desktopStyle {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-wrap: wrap;
+
+      :global button {
+        margin-right: $space_xs;
+      }
     }
   }
 </style>

@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse};
 use diesel::OptionalExtension;
 use std::sync::RwLock;
 
-use crate::bot::{Bot, BotAction, BotStatus};
+use crate::bot::manager;
 use crate::errors::*;
 use crate::extractors::user_from_cookie::UserFromCookie;
 use crate::models::bot_credentials::{
@@ -19,36 +19,31 @@ pub async fn get_bot_info(
     user: UserFromCookie,
     db: web::Data<DbPool>,
     app_config: web::Data<AppConfig>,
-    bot: web::Data<RwLock<Bot>>,
+    bot: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
-    let bot = bot
-        .read()
-        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+    let bot = bot.read()?;
+    let mut db = db.get()?;
 
-    let mut db = db
-        .get()
-        .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
-    let name = app_config.chat_bot_username.clone();
-    let connected = matches!(bot.status(), BotStatus::Connected(_));
+    let status = bot.status()?;
+    let channel_registry = bot.channel_registry.clone();
 
-    let mb_credentials = get_user_by_username(&mut db, &name)
-        .optional()
-        .and_then(|mb_bot_user| {
-            if let Some(bot_user) = mb_bot_user {
-                get_bot_credentials_by_user_id(&mut db, &bot_user.id.clone()).optional()
-            } else {
-                Ok(None)
-            }
-        })
-        .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
+    let name = &app_config.chat_bot_username;
+    let connected = matches!(status, manager::BotStatus::Connected(_));
+
+    let mb_credentials =
+        get_user_by_username(&mut db, name)
+            .optional()
+            .and_then(|mb_bot_user| {
+                if let Some(bot_user) = mb_bot_user {
+                    get_bot_credentials_by_user_id(&mut db, &bot_user.id.clone()).optional()
+                } else {
+                    Ok(None)
+                }
+            })?;
 
     let credentials_state = match mb_credentials {
         Some(credentials) => {
-            let token_is_valid = validate_user_token(&credentials.access_token)
-                .await
-                .map_err(|e| {
-                    AppError::from(AppErrorType::InternalError).inner_error(&e.to_string())
-                })?;
+            let token_is_valid = validate_user_token(&credentials.access_token).await?;
 
             if token_is_valid {
                 CredentialsState::Valid
@@ -59,17 +54,10 @@ pub async fn get_bot_info(
         None => CredentialsState::NotFound,
     };
 
-    let connected_to_chat = {
-        let connected_channels = bot.connected_channels.clone();
-        let connected_channels = connected_channels
-            .read()
-            .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
-
-        connected_channels.contains(&user.logged.username)
-    };
+    let connected_to_chat = channel_registry.get(&user.logged.username).is_some();
 
     Ok(HttpResponse::Ok().json(BotInfo {
-        name,
+        name: name.to_string(),
         credentials_state,
         connected,
         connected_to_chat,
@@ -79,18 +67,18 @@ pub async fn get_bot_info(
 #[get("/join")]
 pub async fn join_chat(
     user: UserFromCookie,
-    bot: web::Data<RwLock<Bot>>,
+    bot: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
-    let bot = bot
-        .read()
-        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+    let bot = bot.read()?;
+    let status = bot.status()?.clone();
 
-    match &bot.status() {
-        BotStatus::Connected(sender) => {
+    match status {
+        manager::BotStatus::Connected(sender) => {
             sender
-                .send(BotAction::JoinChat(user.logged.username.clone()))
-                .await
-                .unwrap();
+                .send(manager::BotExternalAction::Join(
+                    user.logged.username.clone(),
+                ))
+                .await?;
 
             Ok(HttpResponse::Ok().finish())
         }
@@ -101,18 +89,18 @@ pub async fn join_chat(
 #[get("/leave")]
 pub async fn leave_chat(
     user: UserFromCookie,
-    bot: web::Data<RwLock<Bot>>,
+    bot: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
-    let bot = bot
-        .read()
-        .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+    let bot = bot.read()?;
+    let status = bot.status()?.clone();
 
-    match &bot.status() {
-        BotStatus::Connected(sender) => {
+    match status {
+        manager::BotStatus::Connected(sender) => {
             sender
-                .send(BotAction::LeaveChat(user.logged.username.clone()))
-                .await
-                .unwrap();
+                .send(manager::BotExternalAction::Leave(
+                    user.logged.username.clone(),
+                ))
+                .await?;
 
             Ok(HttpResponse::Ok().finish())
         }
@@ -125,7 +113,7 @@ pub async fn connect(
     user: UserFromCookie,
     app_config: web::Data<AppConfig>,
     db: web::Data<DbPool>,
-    bot: web::Data<RwLock<Bot>>,
+    bot_manager: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
     let mut db = db
         .get()
@@ -134,13 +122,12 @@ pub async fn connect(
     if user.logged.username != app_config.chat_bot_username {
         Err(AppError::from(AppErrorType::Unauthorized))
     } else {
-        let mut bot = bot
-            .write()
-            .map_err(|e| AppError::from(AppErrorType::InternalError).inner_error(&e.to_string()))?;
+        let mut manager = bot_manager.write()?;
+        let status = manager.status()?;
 
-        match &bot.status() {
-            BotStatus::Connected(_) => Ok(HttpResponse::Ok().finish()),
-            BotStatus::Disconnected => {
+        match status {
+            manager::BotStatus::Connected(_) => Ok(HttpResponse::Ok().finish()),
+            manager::BotStatus::Disconnected => {
                 // Ensure that bot credentials does exist
                 let mb_credentials = get_bot_credentials_by_user_id(&mut db, &user.logged.id);
                 let credentials_missing =
@@ -160,7 +147,7 @@ pub async fn connect(
                     })?;
                 };
 
-                let _ = &bot.connect().await?;
+                manager.connect().await?;
                 Ok(HttpResponse::Ok().finish())
             }
         }

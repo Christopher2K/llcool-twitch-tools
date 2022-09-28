@@ -1,3 +1,6 @@
+use std::env;
+use std::sync::RwLock;
+
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
@@ -7,8 +10,6 @@ use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use api::{bot, routes, states};
-
-use std::{env, fmt::format, sync::RwLock};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -20,32 +21,34 @@ async fn main() -> std::io::Result<()> {
     let cookie_key = Key::from(secret_key.as_bytes());
 
     // States init
-    let app_config = web::Data::new(states::app_config::AppConfig::new().unwrap());
-    let twitch_app_credentials = web::Data::new(RwLock::new(
-        states::twitch_credentials::TwitchClientCredentials::new(&app_config).await,
-    ));
-
+    let config = states::app_config::AppConfig::new().unwrap();
     let manager = r2d2::ConnectionManager::<PgConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool");
-    let shared_pool = web::Data::new(pool);
+
+    let twitch_app_credentials = web::Data::new(RwLock::new(
+        states::twitch_credentials::TwitchClientCredentials::new(&config).await,
+    ));
+
+    let shared_pool = web::Data::new(pool.clone());
+    let shared_config = web::Data::new(config.clone());
 
     // Twitch bot
-    let mut twitch_bot = bot::Bot::new(shared_pool.clone(), app_config.clone());
-    let bot_connect_result = twitch_bot.connect().await;
-    if let Err(bot_error) = bot_connect_result {
+    let mut bot_manager = bot::manager::BotManager::new(config.clone(), pool.clone());
+    if let Err(bot_manager_error) = bot_manager.connect().await {
         log::error!(
             target: bot::LOG_TARGET,
-            "Initial connection to Twitch socket failed {}",
-            &bot_error
+            "Bot cannot connect to Twitch IRC socket: {}",
+            &bot_manager_error
         );
-    };
+    }
 
-    let shared_twitch_bot = web::Data::new(RwLock::new(twitch_bot));
-    let is_local_app = matches!(app_config.app_env, states::app_config::AppEnv::Local);
+    let shared_bot_manager = web::Data::new(RwLock::new(bot_manager));
+    let is_local_app = matches!(config.app_env, states::app_config::AppEnv::Local);
     let port = env::var("PORT").unwrap_or(String::from("8080"));
     let address = format!("0.0.0.0:{}", port);
+    let app_config = config.clone();
 
     // CORS
     let app = move || {
@@ -60,8 +63,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(shared_pool.clone())
             .app_data(twitch_app_credentials.clone())
-            .app_data(app_config.clone())
-            .app_data(shared_twitch_bot.clone())
+            .app_data(shared_config.clone())
+            .app_data(shared_bot_manager.clone())
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(

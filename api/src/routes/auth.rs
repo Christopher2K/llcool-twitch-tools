@@ -63,7 +63,7 @@ pub async fn get_twitch_access_token(
 
         session
             .get::<String>(&SessionKey::OAuthState.as_str())
-            .map_err(|e| error.clone())
+            .map_err(|_| error.clone())
             .and_then(|mb_state| match mb_state {
                 Some(state) => Ok(state),
                 None => Err(error.clone()),
