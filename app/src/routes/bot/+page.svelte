@@ -3,7 +3,7 @@
   import Banner from '@app/components/Banner.svelte'
   import Button from '@app/components/Button.svelte'
   import { connectBotToTwitch } from '@app/api'
-  import { invalidate } from '$app/navigation'
+  import { invalidateAll } from '$app/navigation'
 
   import type { PageData } from './$types'
 
@@ -26,7 +26,7 @@
 
     try {
       await connectBotToTwitch()
-      await invalidate()
+      await invalidateAll()
     } catch (e) {
       console.error(e)
       error = 'Cannot connect to Twitch socket'
