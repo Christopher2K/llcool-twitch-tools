@@ -80,7 +80,7 @@
 
   .root {
     max-width: 600px;
-    width: 9999px;
+    width: 100%;
   }
 
   form {

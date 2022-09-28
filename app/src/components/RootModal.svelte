@@ -1,24 +1,12 @@
 <script lang="ts">
+  import { portal } from 'svelte-portal'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
 
   // Props
   export let open = false
-
-  // State
-  let dialogElement: HTMLDialogElement
-
-  // Reactive
-  $: {
-    if (dialogElement) {
-      if (open) {
-        dialogElement.showModal()
-      } else {
-        dialogElement.close()
-      }
-    }
-  }
+  export let fullSize = false
 
   // Callback
   function onDialogClick() {
@@ -26,21 +14,57 @@
   }
 </script>
 
-<dialog on:click|self={onDialogClick} class="p-3" bind:this={dialogElement}>
-  <slot />
-</dialog>
+<div class="root" class:open on:click|self={onDialogClick} use:portal={'body'}>
+  <div class="content p-3" class:fullSize>
+    <slot />
+  </div>
+</div>
 
 <style lang="scss">
   @import 'theme';
+  @import 'responsive';
 
-  dialog {
-    border: $border_m $white;
-    outline: none;
-    border-radius: $radius_s;
-  }
+  .root {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
 
-  dialog::backdrop {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+
+    width: 100%;
+    height: 100%;
+
     background-color: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(5px);
+  }
+
+  .root.open {
+    display: inline-flex;
+    z-index: 999;
+  }
+
+  .content {
+    flex: 1;
+    flex-shrink: 0;
+
+    max-width: $modal_max_width;
+    background-color: $white;
+    border-radius: $radius_s;
+
+    @include mobileStyle {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+
+      border-radius: 0;
+    }
+  }
+
+  .content.fullSize {
+    width: 100%;
+
   }
 </style>
