@@ -6,14 +6,15 @@ use futures::{SinkExt, StreamExt};
 use futures_util::stream;
 use log::{error, info, warn};
 use tokio::net::TcpStream;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio_tungstenite::tungstenite::protocol::Message as SocketMessage;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
-use twitch_irc::message::{IRCMessage, ServerMessage};
+use twitch_irc::message::{IRCMessage, PrivmsgMessage, ServerMessage};
 use url::Url;
 
 use super::channel::{ChannelHandler, ChannelName, ChannelRegistry};
-use super::utils::{get_bot_access_token, WEBSOCKET_CLIENT_URL, LOG_TARGET};
+use super::types::BotExternalAction;
+use super::utils::{get_bot_access_token, LOG_TARGET, WEBSOCKET_CLIENT_URL};
 
 use crate::errors::AppError;
 use crate::{states::app_config::AppConfig, types::DbPool};
@@ -28,13 +29,6 @@ type SocketSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, SocketMe
 pub enum BotStatus {
     Connected(mpsc::Sender<BotExternalAction>),
     Disconnected,
-}
-
-#[derive(Debug)]
-pub enum BotExternalAction {
-    Pong,
-    Join(String),
-    Leave(String),
 }
 
 pub struct BotManager {
@@ -74,6 +68,9 @@ impl BotManager {
             mpsc::channel::<BotExternalAction>(32);
         self.bot_external_actions_sender = Some(bot_external_actions_sender);
 
+        let (message_broadcast_sender, message_broadcast_consumer) =
+            watch::channel::<Option<PrivmsgMessage>>(None);
+
         // Open Twitch Socket connection
         let url = Url::parse(WEBSOCKET_CLIENT_URL)?;
         let (ws_stream, _) = connect_async(url).await?;
@@ -84,12 +81,16 @@ impl BotManager {
             "Bot connected to Twitch WS, proceed to authentication..."
         );
 
-        self.start_twitch_socket_consumer(socket_stream);
+        self.start_twitch_socket_consumer(socket_stream, message_broadcast_sender);
         self.authenticate_to_irc(&mut socket_sink, &bot_access_token)
             .await?;
 
         self.start_bot_status_consumer(bot_status_consumer);
-        self.start_bot_external_action_consumer(bot_external_actions_consumer, socket_sink);
+        self.start_bot_external_action_consumer(
+            bot_external_actions_consumer,
+            socket_sink,
+            message_broadcast_consumer,
+        );
 
         Ok(())
     }
@@ -128,7 +129,11 @@ impl BotManager {
         Ok(())
     }
 
-    fn start_twitch_socket_consumer(&self, socket_stream: SocketStream) {
+    fn start_twitch_socket_consumer(
+        &self,
+        socket_stream: SocketStream,
+        message_broadcast_sender: watch::Sender<Option<PrivmsgMessage>>,
+    ) {
         let bot_status_sender = self
             .bot_status_sender
             .clone()
@@ -205,7 +210,17 @@ impl BotManager {
                             };
                         }
                         ServerMessage::Privmsg(priv_msg) => {
-                            println!("Message: {}", priv_msg.message_text);
+                            let send_msg_to_broadcast =
+                                message_broadcast_sender.send(Some(priv_msg.clone()));
+
+                            info!(target: LOG_TARGET, "Message: {}", priv_msg.message_text);
+
+                            if let Err(e) = send_msg_to_broadcast {
+                                error!(
+                                    target: LOG_TARGET,
+                                    "Cannot broadcast msgs to channels {:?}", &e
+                                );
+                            };
                         }
                         unhandled_message => {
                             warn!(
@@ -242,13 +257,17 @@ impl BotManager {
         &self,
         mut bot_external_actions_consumer: mpsc::Receiver<BotExternalAction>,
         mut socket_sink: SocketSink,
+        message_broadcast_consumer: watch::Receiver<Option<PrivmsgMessage>>,
     ) {
         let channel_registry_handle = self.channel_registry.clone();
+        let bot_external_actions_sender = self.bot_external_actions_sender.clone();
 
         tokio::spawn(async move {
             while let Some(external_action) = bot_external_actions_consumer.recv().await {
                 match external_action {
                     BotExternalAction::Pong => {
+                        info!(target: LOG_TARGET, "Sending pong...");
+
                         let send_pong = socket_sink.send(SocketMessage::Text("PONG".to_string()));
                         if let Err(e) = send_pong.await {
                             error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
@@ -264,8 +283,18 @@ impl BotManager {
                         if let Err(e) = send_join.await {
                             error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
                         } else {
-                            let channel_handler = ChannelHandler {};
-                            channel_registry_handle.insert(channel_name, channel_handler);
+                            if let Some(external_action_sender) = bot_external_actions_sender.clone() {
+                                let channel_handler = ChannelHandler::new(
+                                    channel_name.clone(),
+                                    channel_registry_handle.clone(),
+                                    message_broadcast_consumer.clone(),
+                                    external_action_sender.clone(),
+                                );
+                                channel_handler.run();
+                                channel_registry_handle.insert(channel_name, channel_handler);
+                            } else {
+                                error!(target: LOG_TARGET, "External action sender is not ready");
+                            }
                         };
                     }
                     BotExternalAction::Leave(channel_name) => {
@@ -280,6 +309,23 @@ impl BotManager {
                         } else {
                             channel_registry_handle.remove(&channel_name);
                         };
+                    }
+                    BotExternalAction::Respond {
+                        channel_name,
+                        message,
+                    } => {
+                        info!(
+                            target: LOG_TARGET,
+                            "Sending message in {}...", &channel_name
+                        );
+
+                        let send_msg = socket_sink.send(SocketMessage::Text(
+                            format!("PRIVMSG #{} :{}", &channel_name, &message).to_string(),
+                        ));
+
+                        if let Err(e) = send_msg.await {
+                            error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
+                        }
                     }
                 };
             }

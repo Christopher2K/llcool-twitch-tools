@@ -1,5 +1,5 @@
 use super::errors::*;
-use crate::bot::manager::BotExternalAction;
+use crate::bot::types::BotExternalAction;
 
 impl From<AppErrorType> for AppError {
     fn from(error_type: AppErrorType) -> Self {

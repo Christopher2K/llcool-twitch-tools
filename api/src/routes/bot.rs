@@ -3,6 +3,7 @@ use diesel::OptionalExtension;
 use std::sync::RwLock;
 
 use crate::bot::manager;
+use crate::bot::types::BotExternalAction;
 use crate::errors::*;
 use crate::extractors::user_from_cookie::UserFromCookie;
 use crate::models::bot_credentials::{
@@ -75,8 +76,15 @@ pub async fn join_chat(
     match status {
         manager::BotStatus::Connected(sender) => {
             sender
-                .send(manager::BotExternalAction::Join(
+                .send(BotExternalAction::Join(
                     user.logged.username.clone(),
+                ))
+                .await?;
+
+            // TODO: Remove this, set this for testing purposes
+            sender
+                .send(BotExternalAction::Join(
+                    String::from("namelessw05"),
                 ))
                 .await?;
 
@@ -97,7 +105,7 @@ pub async fn leave_chat(
     match status {
         manager::BotStatus::Connected(sender) => {
             sender
-                .send(manager::BotExternalAction::Leave(
+                .send(BotExternalAction::Leave(
                     user.logged.username.clone(),
                 ))
                 .await?;
