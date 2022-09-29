@@ -88,6 +88,13 @@ async fn main() -> std::io::Result<()> {
                             .service(routes::bot::get_bot_info)
                             .service(routes::bot::connect),
                     )
+                    .service(
+                        web::scope("/command")
+                            .service(routes::command::get_user_commands)
+                            .service(routes::command::create_user_command)
+                            .service(routes::command::update_user_command)
+                            .service(routes::command::delete_user_command),
+                    )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
     };
