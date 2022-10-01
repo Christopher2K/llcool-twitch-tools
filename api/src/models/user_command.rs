@@ -9,7 +9,7 @@ use super::user::User;
 type QueryError = diesel::result::Error;
 
 #[derive(Identifiable, Queryable, Associations, Serialize, Debug, AsChangeset)]
-#[belongs_to(User)]
+#[diesel(belongs_to(User))]
 #[diesel(table_name = user_commands)]
 #[serde(rename_all = "camelCase")]
 pub struct UserCommand {
