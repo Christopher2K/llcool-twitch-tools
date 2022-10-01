@@ -20,7 +20,7 @@ pub async fn get_user_commands(
     Ok(HttpResponse::Ok().json(commands))
 }
 
-#[post("/")]
+#[post("")]
 pub async fn create_user_command(
     user: UserFromCookie,
     mut data: web::Json<models::user_command::NewUserCommand>,
@@ -37,11 +37,11 @@ pub async fn create_user_command(
 pub async fn update_user_command(
     command_id: web::Path<Uuid>,
     data: web::Json<models::user_command::UpdateUserCommand>,
-    _user: UserFromCookie,
+    user: UserFromCookie,
     db: web::Data<DbPool>,
 ) -> Result<HttpResponse, AppError> {
     let mut db = db.get()?;
-    let command = models::user_command::update_user_command(&mut db, &command_id, &data)?;
+    let command = models::user_command::update_user_command(&mut db, &command_id, &user.logged.id, &data)?;
 
     Ok(HttpResponse::Ok().json(command))
 }

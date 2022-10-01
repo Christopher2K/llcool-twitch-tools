@@ -32,7 +32,6 @@ pub struct NewUserCommand {
 pub struct UpdateUserCommand {
     pub name: String,
     pub message: String,
-    pub user_id: Uuid,
 }
 
 pub fn get_all_users_commands(
@@ -58,11 +57,12 @@ pub fn create_user_command(
 pub fn update_user_command(
     db: &mut PgConnection,
     command_id: &Uuid,
+    owner_id: &Uuid,
     updated_command: &UpdateUserCommand,
 ) -> Result<UserCommand, QueryError> {
     use crate::schema::user_commands::dsl::*;
 
-    diesel::update(user_commands.filter(id.eq(command_id)))
+    diesel::update(user_commands.filter(id.eq(command_id).and(user_id.eq(owner_id))))
         .set(updated_command)
         .get_result(db)
 }
