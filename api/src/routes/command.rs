@@ -1,13 +1,11 @@
 use actix_web::{delete, get, patch, post, web, HttpResponse};
 use uuid::Uuid;
 
-use crate::errors::AppError;
+use crate::errors::{AppError, AppErrorType};
 use crate::extractors::UserFromCookie;
 use crate::models;
 use crate::types::DbPool;
 
-// TODO: CHECK IF THE COMMAND DOES BELONG TO THE USER
-// YOU DON'T WANT TO LET PEOPLE EDIT COMMANDS OF OTHER PEOPLE
 
 #[get("")]
 pub async fn get_user_commands(
@@ -41,7 +39,8 @@ pub async fn update_user_command(
     db: web::Data<DbPool>,
 ) -> Result<HttpResponse, AppError> {
     let mut db = db.get()?;
-    let command = models::user_command::update_user_command(&mut db, &command_id, &user.logged.id, &data)?;
+    let command =
+        models::user_command::update_user_command(&mut db, &command_id, &user.logged.id, &data)?;
 
     Ok(HttpResponse::Ok().json(command))
 }
@@ -49,11 +48,16 @@ pub async fn update_user_command(
 #[delete("/{command_id}")]
 pub async fn delete_user_command(
     command_id: web::Path<Uuid>,
-    _user: UserFromCookie,
+    user: UserFromCookie,
     db: web::Data<DbPool>,
 ) -> Result<HttpResponse, AppError> {
     let mut db = db.get()?;
-    models::user_command::delete_user_command(&mut db, &command_id)?;
+    let nb_cmd_deleted =
+        models::user_command::delete_user_command(&mut db, &user.logged.id, &command_id)?;
 
-    Ok(HttpResponse::NoContent().finish())
+    if nb_cmd_deleted < 1 {
+        Err(AppError::from(AppErrorType::EntityNotFoundError))
+    } else {
+        Ok(HttpResponse::NoContent().finish())
+    }
 }

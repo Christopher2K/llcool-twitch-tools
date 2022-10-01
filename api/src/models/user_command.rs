@@ -67,8 +67,12 @@ pub fn update_user_command(
         .get_result(db)
 }
 
-pub fn delete_user_command(db: &mut PgConnection, command_id: &Uuid) -> Result<usize, QueryError> {
+pub fn delete_user_command(
+    db: &mut PgConnection,
+    owner_id: &Uuid,
+    command_id: &Uuid,
+) -> Result<usize, QueryError> {
     use crate::schema::user_commands::dsl::*;
 
-    diesel::delete(user_commands.filter(id.eq(command_id))).execute(db)
+    diesel::delete(user_commands.filter(id.eq(command_id).and(user_id.eq(owner_id)))).execute(db)
 }
