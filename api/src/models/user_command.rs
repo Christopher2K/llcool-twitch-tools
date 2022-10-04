@@ -8,7 +8,7 @@ use super::user::User;
 
 type QueryError = diesel::result::Error;
 
-#[derive(Identifiable, Queryable, Associations, Serialize, Debug, AsChangeset)]
+#[derive(Identifiable, Queryable, Associations, Serialize, Debug, AsChangeset, Clone)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = user_commands)]
 #[serde(rename_all = "camelCase")]

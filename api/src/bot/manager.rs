@@ -12,12 +12,14 @@ use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 use twitch_irc::message::{IRCMessage, PrivmsgMessage, ServerMessage};
 use url::Url;
 
-use super::channel::{ChannelHandler, ChannelName, ChannelRegistry};
+use super::channel::{ChannelDef, ChannelHandler, ChannelName, ChannelRegistry};
 use super::types::BotExternalAction;
 use super::utils::{get_bot_access_token, LOG_TARGET, WEBSOCKET_CLIENT_URL};
 
 use crate::errors::AppError;
-use crate::{states::app_config::AppConfig, types::DbPool};
+use crate::models::user_command::get_all_users_commands;
+use crate::states::app_config::AppConfig;
+use crate::types::DbPool;
 
 // Type alias
 type ThreadSafeRw<T> = Arc<RwLock<T>>;
@@ -51,7 +53,7 @@ impl BotManager {
             bot_status_sender: None,
             bot_external_actions_sender: None,
 
-            channel_registry: Arc::new(DashMap::<ChannelName, ChannelHandler>::new()),
+            channel_registry: Arc::new(DashMap::<ChannelName, ChannelDef>::new()),
         }
     }
 
@@ -261,6 +263,7 @@ impl BotManager {
     ) {
         let channel_registry_handle = self.channel_registry.clone();
         let bot_external_actions_sender = self.bot_external_actions_sender.clone();
+        let db_pool = self.db_pool.clone();
 
         tokio::spawn(async move {
             while let Some(external_action) = bot_external_actions_consumer.recv().await {
@@ -273,7 +276,10 @@ impl BotManager {
                             error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
                         };
                     }
-                    BotExternalAction::Join(channel_name) => {
+                    BotExternalAction::Join {
+                        channel_name,
+                        user_id,
+                    } => {
                         info!(target: LOG_TARGET, "Trying to join {}", channel_name);
 
                         let send_join = socket_sink.send(SocketMessage::Text(
@@ -283,15 +289,52 @@ impl BotManager {
                         if let Err(e) = send_join.await {
                             error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
                         } else {
-                            if let Some(external_action_sender) = bot_external_actions_sender.clone() {
-                                let channel_handler = ChannelHandler::new(
-                                    channel_name.clone(),
-                                    channel_registry_handle.clone(),
-                                    message_broadcast_consumer.clone(),
-                                    external_action_sender.clone(),
-                                );
-                                channel_handler.run();
-                                channel_registry_handle.insert(channel_name, channel_handler);
+                            if let Some(external_action_sender) =
+                                bot_external_actions_sender.clone()
+                            {
+                                if let Some(user_id) = user_id {
+                                    let commands = db_pool
+                                        .get()
+                                        .map_err(anyhow::Error::msg)
+                                        .and_then(|mut conn| {
+                                            get_all_users_commands(&mut conn, &user_id)
+                                                .map_err(anyhow::Error::msg)
+                                        });
+
+                                    match commands {
+                                        Ok(commands) => {
+                                            let channel_handler = ChannelHandler::new(
+                                                channel_name.clone(),
+                                                commands,
+                                                channel_registry_handle.clone(),
+                                                message_broadcast_consumer.clone(),
+                                                external_action_sender.clone(),
+                                            );
+                                            let tx_kill_sig = channel_handler.run();
+                                            channel_registry_handle.insert(
+                                                channel_name,
+                                                (channel_handler, tx_kill_sig),
+                                            );
+                                        }
+                                        Err(_) => {
+                                            error!(
+                                                target: LOG_TARGET,
+                                                "Cannot start channel actor"
+                                            );
+                                        }
+                                    }
+                                } else {
+                                    let channel_handler = ChannelHandler::new(
+                                        channel_name.clone(),
+                                        vec![],
+                                        channel_registry_handle.clone(),
+                                        message_broadcast_consumer.clone(),
+                                        external_action_sender.clone(),
+                                    );
+                                    let tx_kill_sig = channel_handler.run();
+                                    channel_registry_handle
+                                        .insert(channel_name, (channel_handler, tx_kill_sig));
+                                };
                             } else {
                                 error!(target: LOG_TARGET, "External action sender is not ready");
                             }
@@ -307,7 +350,16 @@ impl BotManager {
                         if let Err(e) = send_part.await {
                             error!(target: LOG_TARGET, "Cannot send message to WS {:?}", e);
                         } else {
-                            channel_registry_handle.remove(&channel_name);
+                            let channel_def = channel_registry_handle.remove(&channel_name);
+
+                            if let Some((_, (_, tx_kill_sig))) = channel_def {
+                                if let Err(e) = tx_kill_sig.send(()) {
+                                    error!(
+                                        target: LOG_TARGET,
+                                        "Cannot kill channel actor: {:?}", e
+                                    );
+                                }
+                            }
                         };
                     }
                     BotExternalAction::Respond {

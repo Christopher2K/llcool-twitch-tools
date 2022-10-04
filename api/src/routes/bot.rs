@@ -76,16 +76,18 @@ pub async fn join_chat(
     match status {
         manager::BotStatus::Connected(sender) => {
             sender
-                .send(BotExternalAction::Join(
-                    user.logged.username.clone(),
-                ))
+                .send(BotExternalAction::Join {
+                    channel_name: user.logged.username.clone(),
+                    user_id: Some(user.logged.id.clone()),
+                })
                 .await?;
 
             // TODO: Remove this, set this for testing purposes
             sender
-                .send(BotExternalAction::Join(
-                    String::from("namelessw05"),
-                ))
+                .send(BotExternalAction::Join {
+                    channel_name: String::from("namelessw05"),
+                    user_id: None,
+                })
                 .await?;
 
             Ok(HttpResponse::Ok().finish())
@@ -105,9 +107,7 @@ pub async fn leave_chat(
     match status {
         manager::BotStatus::Connected(sender) => {
             sender
-                .send(BotExternalAction::Leave(
-                    user.logged.username.clone(),
-                ))
+                .send(BotExternalAction::Leave(user.logged.username.clone()))
                 .await?;
 
             Ok(HttpResponse::Ok().finish())

@@ -5,6 +5,9 @@ pub enum BotExternalAction {
         channel_name: String,
         message: String,
     },
-    Join(String),
+    Join {
+        channel_name: String,
+        user_id: Option<uuid::Uuid>,
+    },
     Leave(String),
 }
