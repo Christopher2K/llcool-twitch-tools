@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { LOGIN_URL, LOGOUT_URL } from '@app/api'
   import Button from '@app/components/Button.svelte'
   import Typography from '@app/components/Typography.svelte'
   import Banner from '@app/components/Banner.svelte'
+  import { LOGIN_URL, LOGOUT_URL } from '@app/constants';
 
   import type { PageData } from './$types'
 

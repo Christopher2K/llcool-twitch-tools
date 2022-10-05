@@ -3,30 +3,19 @@
   import Typography from '@app/components/Typography.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
   import CommandFormModal from '@app/components/CommandFormModal.svelte'
-  import type { Command } from '@app/models'
 
-  const fakeCommands: Command[] = [
-    {
-      id: '1',
-      name: 'vsc',
-      message: 'Fuck visual studio code',
-    },
-    {
-      id: '2',
-      name: 'intellij',
-      message: 'Eat up your ram cuz the JVM is broken by design',
-    },
-    {
-      id: '3',
-      name: 'vim',
-      message: 'Use nvim old ass',
-    },
-  ]
+  import { type UserCommand, deleteUserCommand, createUserCommand, editUserCommand } from '@app/api/command'
+
+  import type { PageData } from './$types'
+  import { invalidateAll } from '$app/navigation'
+
+  // Props
+  export let data: PageData
 
   // State
   let deleteConfirmationModalOpen = false
   let commandFormModalOpen = false
-  let selectedCommand: Command | undefined = undefined
+  let selectedCommand: UserCommand | undefined = undefined
 
   // Reactive
   $: confirmationModalDeleteMessage = selectedCommand
@@ -34,7 +23,7 @@
     : ''
 
   // Callback
-  function openDeleteConfirmationModal(command: Command) {
+  function openDeleteConfirmationModal(command: UserCommand) {
     deleteConfirmationModalOpen = true
     selectedCommand = command
   }
@@ -44,7 +33,7 @@
     selectedCommand = undefined
   }
 
-  function openCommandFormModal(command: Command | undefined = undefined) {
+  function openCommandFormModal(command: UserCommand | undefined = undefined) {
     selectedCommand = command
     commandFormModalOpen = true
   }
@@ -54,15 +43,26 @@
     selectedCommand = undefined
   }
 
-  function deleteCommand() {
-    console.log('Deleting command ', selectedCommand)
-    closeDeleteConfirmationModal()
+  async function deleteCommand() {
+    if (selectedCommand) {
+      await deleteUserCommand(selectedCommand.id)
+      await invalidateAll()
+      closeDeleteConfirmationModal()
+    }
   }
 
-  function onConfirmFormModal(
-    event: CustomEvent<{ id?: string; command: Omit<Command, 'id'> }>,
+  async function onConfirmFormModal(
+    event: CustomEvent<{ id?: string; command: Omit<UserCommand, 'id'> }>,
   ) {
-    console.log(event.detail)
+    const { id, command } = event.detail
+    if (id) {
+      await editUserCommand(id, command)
+    } else {
+      await createUserCommand(command)
+    }
+
+    await invalidateAll()
+    commandFormModalOpen = false
   }
 </script>
 
@@ -81,7 +81,7 @@
       <th>Actions</th>
     </tr>
 
-    {#each fakeCommands as command}
+    {#each data.userCommands as command}
       <tr>
         <td>
           <span class="label">Name</span>

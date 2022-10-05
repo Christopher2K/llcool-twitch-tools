@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { LOGOUT_URL } from '@app/api'
-
   import Typography from '@app/components/Typography.svelte'
   import SideMenuItem from '@app/components/SideMenuItem.svelte'
   import Button from '@app/components/Button.svelte'
+  import { LOGOUT_URL } from '@app/constants';
 
   // Props
   export let title: string

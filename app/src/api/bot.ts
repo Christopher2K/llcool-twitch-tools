@@ -1,53 +1,8 @@
 import { z } from 'zod'
 
-import { ErrorType } from '@app/error'
 import { PUBLIC_API_URL } from '$env/static/public'
 
-export const LOGIN_URL = `${PUBLIC_API_URL}/auth/login`
-export const LOGOUT_URL = `${PUBLIC_API_URL}/auth/logout`
-
-function handleHttpError(response: Response): never {
-  let error = new Error(ErrorType.ServerError)
-
-  switch (response.status) {
-    case 401:
-      error = new Error(ErrorType.Unauthorized)
-      break
-    case 403:
-      error = new Error(ErrorType.Forbidden)
-      break
-  }
-
-  throw error
-}
-
-const userApiValidator = z.object({
-  id: z.string(),
-  twitchId: z.string(),
-  username: z.string(),
-})
-
-export type UserApi = z.infer<typeof userApiValidator>
-
-export async function getUserData(
-  cookie: string | undefined = undefined,
-): Promise<UserApi> {
-  const response = await fetch(
-    `${PUBLIC_API_URL}/auth/me`,
-    cookie == null
-      ? {
-          credentials: 'include',
-        }
-      : { headers: { cookie } },
-  )
-
-  if (!response.ok) {
-    handleHttpError(response)
-  }
-
-  const json = await response.json()
-  return await userApiValidator.parseAsync(json)
-}
+import { handleHttpError } from './utils'
 
 const botInfoApiValidator = z.object({
   name: z.string(),
