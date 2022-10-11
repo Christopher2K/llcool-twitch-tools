@@ -8,46 +8,31 @@
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
   export let type: HTMLButtonElement['type'] = 'button'
+  export let tailwindClassNames = 'border-4 rounded-lg px-5 py-3 text-2xl text-center'
 
   let className: string = ''
   export { className as class }
 </script>
 
 {#if href}
-  <a {href} class="{className} {theme}">{label}</a>
+  <a {href} class="{tailwindClassNames} {className} {theme}">{label}</a>
 {:else}
-  <button {type} disabled={isLoading} on:click class="{className} {theme}">
+  <button
+    {type}
+    disabled={isLoading}
+    on:click
+    class="{tailwindClassNames} {className} {theme}"
+  >
     {isLoading ? 'Loading...' : label}
   </button>
 {/if}
 
-<style lang="scss">
-  @import 'theme.scss';
-
-  a,
-  button {
-    display: inline-block;
-    padding: $space_xs;
-
-    border: 4px solid $primary_dark;
-    border-radius: $radius_s;
-
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover {
-      opacity: 0.7;
-    }
+<style lang="postcss">
+  .danger {
+    @apply bg-red-400 hover:bg-red-700 border-red-900 text-white;
   }
 
   .primary {
-    background-color: $white;
-    color: $primary_dark;
-  }
-
-  .danger {
-    border-color: $danger_dark;
-    background-color: $danger_dark;
-    color: $white;
+    @apply bg-blue-400 hover:bg-blue-900 border-white text-white;
   }
 </style>
