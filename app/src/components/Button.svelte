@@ -8,7 +8,7 @@
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
   export let type: HTMLButtonElement['type'] = 'button'
-  export let tailwindClassNames = 'border-4 rounded-lg px-5 py-3 text-2xl text-center'
+  export let tailwindClassNames = 'border-4 rounded-lg px-5 py-3 text-xl text-center'
 
   let className: string = ''
   export { className as class }

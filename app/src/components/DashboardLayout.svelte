@@ -5,7 +5,7 @@
   import { LOGOUT_URL } from '@app/constants'
 
   // Props
-  export let menuItems: NavMenuItemDef[] = [];
+  export let menuItems: NavMenuItemDef[] = []
 
   // State
   let menuContainer: HTMLDivElement
@@ -37,7 +37,7 @@
   }
 </script>
 
-<div class="w-full h-full">
+<div class="w-full h-full flex flex-col justify-start items-start">
   <nav
     class="flex flex-row justify-between items-center px-4 w-full bg-blue-300 h-16 relative"
     class:open={isMenuOpen}
@@ -63,7 +63,7 @@
     </div>
   </nav>
 
-  <div class="h-full w-full flex flex-row justify-start items-start">
+  <div class="flex-1 w-full flex flex-row justify-start items-start">
     <nav class="hidden md:block shrink-0 w-80 h-full bg-blue-300">
       {#each menuItems as item}
         <NavMenuItem on:navigate={closeMenu} href={item.href} label={item.label} />

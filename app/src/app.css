@@ -13,3 +13,9 @@
     @apply w-full h-full bg-blue-200;
   }
 }
+
+@layer components {
+  .icon-emoji {
+    @apply text-3xl;
+  }
+}

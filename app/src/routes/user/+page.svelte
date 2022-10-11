@@ -1,7 +1,6 @@
 <script lang="ts">
   import BotStatus from '@app/components/BotStatus.svelte'
   import Banner from '@app/components/Banner.svelte'
-  import Typography from '@app/components/Typography.svelte'
   import Button from '@app/components/Button.svelte'
 
   import { askBotToJoinChat, askBotToLeaveChat } from '@app/api'
@@ -70,25 +69,28 @@
   }
 </script>
 
-<Typography tag="h1">Dashboard</Typography>
+<h1 class="text-5xl font-bold mb-10">Dashboard</h1>
 
 <section>
-  <Typography tag="h2" class="mb-2">Bot status</Typography>
+  <p class="text-xl mb-10">
+    In the section, you can get any available metric the bot can show
+  </p>
+
   {#if credentialsWarning}
-    <Banner title="The bot is disconnected!" theme="warning" class="mb-2">
-      <Typography>
-        {credentialsWarning}
-      </Typography>
+    <Banner title="The bot is disconnected!" theme="warning" class="mb-5">
+      <p>{credentialsWarning}</p>
     </Banner>
   {/if}
 
   {#if error}
-    <Banner title="Error!" on:close={clearError} theme="danger" closable class="mb-2">
-      <Typography>{error}</Typography>
+    <Banner title="Error!" on:close={clearError} theme="danger" closable class="mb-5">
+      <p>{error}</p>
     </Banner>
   {/if}
 
+  <h2 class="text-3xl font-bold mb-6">Bot global status</h2>
   <BotStatus isConnected={botInfo.connected} isConnectedToUserChat={isBotInChat} />
+
   <Button
     class="button is-primary"
     isLoading={updatingBotPresence}
@@ -96,7 +98,3 @@
     label={botCtaLabel}
   />
 </section>
-
-<style lang="scss">
-  @import 'theme.scss';
-</style>

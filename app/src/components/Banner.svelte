@@ -1,5 +1,4 @@
 <script lang="ts" context="module">
-  import Typography from './Typography.svelte'
   import { createEventDispatcher } from 'svelte'
 
   export type BannerTheme = 'warning' | 'danger' | 'info'
@@ -25,71 +24,45 @@
   $: isHeaderDislayed = Boolean(title) || closable
 </script>
 
-<article class="{className} {theme}">
+<article class="w-full rounded-md {className} {theme}">
   {#if isHeaderDislayed}
-    <header class="py-1 px-3">
+    <header class="flex flex-row justify-between items-center rounded-t-md py-2 px-3">
       <div>
         {#if title}
-          <Typography tag="h3">{title}</Typography>
+          <h3 class="font-bold text-xl">{title}</h3>
         {/if}
       </div>
 
       {#if closable}
-        <button type="button" on:click={onClose}>Close</button>
+        <button type="button" on:click={onClose} class="underline">Close</button>
       {/if}
     </header>
   {/if}
 
-  <div class="py-1 px-3">
+  <div class="py-2 px-3">
     <slot />
   </div>
 </article>
 
-<style lang="scss">
-  @import 'theme';
-
-  article {
-    width: 100%;
-    border-radius: $radius_s;
-  }
-
-  header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-
-    border-top-left-radius: $radius_s;
-    border-top-right-radius: $radius_s;
-
-    button {
-      font-size: 0.8rem;
-      border: none;
-      border-bottom: 2px solid $black;
-      padding: 0;
-      background-color: transparent;
-      cursor: pointer;
-    }
-  }
-
+<style lang="postcss">
   .warning {
-    background-color: $warning;
-    header {
-      background-color: $warning_dark;
-    }
+    @apply bg-amber-400;
+  }
+  .warning header {
+    @apply bg-amber-600;
   }
 
   .info {
-    background-color: $info;
-    header {
-      background-color: $info_dark;
-    }
+    @apply bg-cyan-400;
+  }
+  .info header {
+    @apply bg-cyan-600;
   }
 
   .danger {
-    background-color: $danger;
-    header {
-      background-color: $danger_dark;
-    }
+    @apply bg-red-400;
+  }
+  .danger header {
+    @apply bg-red-600;
   }
 </style>

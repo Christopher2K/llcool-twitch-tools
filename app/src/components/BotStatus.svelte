@@ -1,35 +1,29 @@
 <script lang="ts">
+  // Props
   export let isConnected: boolean
   export let isConnectedToUserChat: boolean
+  let className: string = ''
 
-  $: connexionLabel = isConnected
-    ? 'Connected to Twitch socket'
-    : 'Disconnected from Twitch'
-  $: chatConnexionLabel = isConnectedToUserChat
-    ? 'Reading your chat'
-    : 'Not in your chat channel'
+  // Computed
+  $: statusListItems = [
+    {
+      label: isConnected ? 'Connected to Twitch socket' : 'Disconnected from Twitch',
+      emoji: isConnected ? '🟢' : '🔴',
+    },
+    {
+      label: isConnectedToUserChat ? 'Reading your chat' : 'Not in your chat channel',
+      emoji: isConnectedToUserChat ? '🤖' : '💤',
+    },
+  ]
+
+  export { className as class }
 </script>
 
-<ul class="mb-5">
-  <li>
-    <span class="icon-emoji mr-2">{isConnected ? '🟢' : '🔴'}</span>
-    <span>{connexionLabel}</span>
-  </li>
-  <li>
-    <span class="icon-emoji mr-2">{isConnectedToUserChat ? '🤖' : '💤'}</span>
-    <span>{chatConnexionLabel}</span>
-  </li>
+<ul class="mb-5 {className}">
+  {#each statusListItems as item}
+    <li class="flex flex-row justify-start items-center mb-2">
+      <span class="inline-block icon-emoji mr-5 text-lg">{item.emoji}</span>
+      <span class="inline-block text-lg">{item.label}</span>
+    </li>
+  {/each}
 </ul>
-
-<style lang="scss">
-  li {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
-  }
-
-  span {
-    display: block;
-  }
-</style>
