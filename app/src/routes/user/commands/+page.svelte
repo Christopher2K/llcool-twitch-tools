@@ -6,7 +6,7 @@
 
   import { type UserCommand, deleteUserCommand, createUserCommand, editUserCommand } from '@app/api/command'
 
-  import type { PageData } from './$types'
+  import type { PageData } from './$types';
   import { invalidateAll } from '$app/navigation'
 
   // Props
