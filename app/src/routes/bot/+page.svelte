@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Typography from '@app/components/Typography.svelte'
   import Banner from '@app/components/Banner.svelte'
   import Button from '@app/components/Button.svelte'
   import { connectBotToTwitch } from '@app/api'
@@ -41,19 +40,17 @@
   }
 </script>
 
-<Typography tag="h1">Status</Typography>
+<h1 class="text-5xl font-bold mb-10">Status</h1>
 
 {#if error}
-  <Banner title="Error!" theme="danger" class="mb-2">
-    <Typography>{error}</Typography>
+  <Banner title="Error!" theme="danger" class="mb-5">
+    <p>{error}</p>
   </Banner>
 {/if}
 
 {#if !botInfo.connected}
-  <Banner title="The bot is disconnected!" theme="warning" class="mb-2">
-    <Typography class="mb-2"
-      >The bot cannot listen to user chat. Try to reconnect manually.</Typography
-    >
+  <Banner title="The bot is disconnected!" theme="warning" class="mb-5">
+    <p class="mb-5">The bot cannot listen to user chat. Try to reconnect manually.</p>
     <Button
       label="Reconnect"
       on:click={manuallyConnectToSocket}
@@ -62,10 +59,7 @@
   </Banner>
 {/if}
 
-<Typography>
-  <span class="icon-emoji mr-2">{botInfo.connected ? '🟢' : '🔴'}</span>
+<p class="flex flex-row justify-start items-center">
+  <span class="icon-emoji mr-5">{botInfo.connected ? '🟢' : '🔴'}</span>
   <span>{connexionLabel}</span>
-</Typography>
-
-<style lang="scss">
-</style>
+</p>

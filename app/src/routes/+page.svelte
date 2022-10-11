@@ -1,6 +1,5 @@
 <script lang="ts">
   import Button from '@app/components/Button.svelte'
-  import Typography from '@app/components/Typography.svelte'
   import Banner from '@app/components/Banner.svelte'
   import { LOGIN_URL, LOGOUT_URL } from '@app/constants'
 
@@ -15,7 +14,7 @@
   $: title = logged ? `Heyo ${user.username}, howdy?` : 'LL Cool Twitch Tools'
 </script>
 
-<main class="p-6 w-full flex flex-col justify-center items-center min-h-full">
+<main class="p-6 mx-auto w-full max-w-screen-lg flex flex-col justify-center items-center min-h-full">
   <h1 class="text-center font-black text-4xl mb-16">{title}</h1>
 
   {#if isBot}

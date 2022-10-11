@@ -9,8 +9,8 @@
 
   html,
   body {
-    @apply bg-blue-200;
     @apply w-full h-full bg-blue-200;
+    font-size: 18px;
   }
 }
 

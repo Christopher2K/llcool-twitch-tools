@@ -8,7 +8,7 @@
   export let theme: ButtonTheme = 'primary'
   export let href: string | undefined = undefined
   export let type: HTMLButtonElement['type'] = 'button'
-  export let tailwindClassNames = 'border-4 rounded-lg px-5 py-3 text-xl text-center'
+  export let tailwindClassNames = 'rounded-lg px-4 py-2 text-lg text-center'
 
   let className: string = ''
   export { className as class }
@@ -29,10 +29,10 @@
 
 <style lang="postcss">
   .danger {
-    @apply bg-red-400 hover:bg-red-700 border-red-900 text-white;
+    @apply bg-red-400 hover:bg-red-700 text-white;
   }
 
   .primary {
-    @apply bg-blue-400 hover:bg-blue-900 border-white text-white;
+    @apply bg-blue-400 hover:bg-blue-900 text-white;
   }
 </style>

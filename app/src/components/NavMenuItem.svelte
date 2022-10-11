@@ -30,7 +30,7 @@
 
 <a
   {href}
-  class="block text-lg px-4 py-2 hover:bg-blue-400 {className}"
+  class="block px-4 py-2 hover:bg-blue-400 {className}"
   class:active
   on:click={onNavigate}
 >

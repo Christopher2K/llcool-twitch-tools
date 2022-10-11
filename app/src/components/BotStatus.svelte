@@ -22,8 +22,8 @@
 <ul class="mb-5 {className}">
   {#each statusListItems as item}
     <li class="flex flex-row justify-start items-center mb-2">
-      <span class="inline-block icon-emoji mr-5 text-lg">{item.emoji}</span>
-      <span class="inline-block text-lg">{item.label}</span>
+      <span class="inline-block icon-emoji mr-5">{item.emoji}</span>
+      <span class="inline-block">{item.label}</span>
     </li>
   {/each}
 </ul>

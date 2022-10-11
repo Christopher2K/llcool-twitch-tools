@@ -43,7 +43,7 @@
     class:open={isMenuOpen}
   >
     <a class="font-bold text-xl" href="/">Twitch Tools</a>
-    <button type="button" on:click|stopPropagation={toggleMenu} class="font-bold text-lg">
+    <button type="button" on:click|stopPropagation={toggleMenu} class="text-xl font-bold">
       Menu
     </button>
     <div
