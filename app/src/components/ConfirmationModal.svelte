@@ -3,7 +3,6 @@
 
   import RootModal from './RootModal.svelte'
   import Button from './Button.svelte'
-  import Typography from './Typography.svelte'
   import ModalHeader from './ModalHeader.svelte'
   import ModalFooter from './ModalFooter.svelte'
 
@@ -29,13 +28,13 @@
   <div>
     {#if title}
       <ModalHeader>
-        <Typography tag="h3">{title}</Typography>
+        <h3>{title}</h3>
       </ModalHeader>
     {/if}
 
     {#if message}
       <div class="mb-3">
-        <Typography>{message}</Typography>
+        <p>{message}</p>
       </div>
     {/if}
 

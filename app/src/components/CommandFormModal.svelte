@@ -4,11 +4,11 @@
 
   import type { Command } from '@app/models'
 
-  import Typography from './Typography.svelte'
   import RootModal from './RootModal.svelte'
   import Button from './Button.svelte'
   import ModalHeader from './ModalHeader.svelte'
   import ModalFooter from './ModalFooter.svelte'
+  import Fieldset from './Fieldset.svelte'
 
   const dispatch = createEventDispatcher()
   let formElement: HTMLFormElement
@@ -53,19 +53,32 @@
 
 <div use:portal={'body'}>
   <RootModal {open} on:close={onClose}>
-    <div class="root">
+    <div class="w-full">
       <ModalHeader>
-        <Typography tag="h3">{title}</Typography>
+        <h3>{title}</h3>
       </ModalHeader>
-      <form on:submit|preventDefault={dispatchConfirmEvent} bind:this={formElement}>
-        <fieldset>
-          <label for="name">Name</label>
-          <input name="name" type="text" bind:value={formCommand.name} />
-        </fieldset>
-        <fieldset>
-          <label for="message">Message</label>
-          <textarea name="message" bind:value={formCommand.message} />
-        </fieldset>
+      <form
+        on:submit|preventDefault={dispatchConfirmEvent}
+        bind:this={formElement}
+        class="flex flex-col justify-start items-start w-full gap-y-5"
+      >
+        <Fieldset>
+          <label for="name" class="font-semibold text-lg">Name</label>
+          <input
+            name="name"
+            type="text"
+            bind:value={formCommand.name}
+            class="w-full border-2 border-black rounded-md font-semibold p-2"
+          />
+        </Fieldset>
+        <Fieldset>
+          <label for="message" class="font-semibold text-lg">Message</label>
+          <textarea
+            name="message"
+            bind:value={formCommand.message}
+            class="w-full border-2 border-black rounded-md font-semibold p-2"
+          />
+        </Fieldset>
         <ModalFooter tag="fieldset">
           <Button label={confirmButtonLabel} type="submit" />
           <Button label="Close" type="button" theme="danger" on:click={onClose} />
@@ -74,54 +87,3 @@
     </div>
   </RootModal>
 </div>
-
-<style lang="scss">
-  @import 'theme.scss';
-
-  .root {
-    max-width: 600px;
-    width: 100%;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    gap: $space_m;
-
-    width: 100%;
-  }
-
-  fieldset {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: flex-start;
-    width: 100%;
-
-    gap: $space_xxs;
-  }
-
-  label {
-    font-weight: 600;
-    font-size: 1.1rem;
-  }
-
-  input,
-  textarea {
-    width: 100%;
-
-    border: 2px solid;
-    border-radius: $radius_s;
-
-    font-size: 1rem;
-    font-weight: 500;
-
-    padding: $space_xs;
-  }
-
-  input {
-    height: 2rem;
-  }
-</style>

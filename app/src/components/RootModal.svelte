@@ -14,57 +14,17 @@
   }
 </script>
 
-<div class="root" class:open on:click|self={onDialogClick} use:portal={'body'}>
-  <div class="content p-3" class:fullSize>
+<div
+  class="fixed top-0 left-0 z-50 flex-row justify-center items-center w-full h-full bg-gray-900/30 backdrop-blur-sm"
+  class:hidden={!open}
+  class:inline-flex={open}
+  on:click|self={onDialogClick}
+  use:portal={'body'}
+>
+  <div
+    class="flex-1 flex-shrink-0 p-3 bg-white w-full h-full md:max-w-2xl md:rounded-md md:h-auto"
+    class:w-full={fullSize}
+  >
     <slot />
   </div>
 </div>
-
-<style lang="scss">
-  @import 'theme';
-  @import 'responsive';
-
-  .root {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-
-    width: 100%;
-    height: 100%;
-
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(5px);
-  }
-
-  .root.open {
-    display: inline-flex;
-    z-index: 999;
-  }
-
-  .content {
-    flex: 1;
-    flex-shrink: 0;
-
-    max-width: $modal_max_width;
-    background-color: $white;
-    border-radius: $radius_s;
-
-    @include mobileStyle {
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-
-      border-radius: 0;
-    }
-  }
-
-  .content.fullSize {
-    width: 100%;
-
-  }
-</style>
