@@ -6,6 +6,7 @@ const config = {
   // Consult https://github.com/sveltejs/svelte-preprocess
   // for more information about preprocessors
   preprocess: preprocess({
+    postcss: true,
     globalStyle: true,
     scss: {
       includePaths: ['./src/styles', './node_modules'],
@@ -16,7 +17,7 @@ const config = {
     alias: {
       '@app': 'src',
     },
-    adapter: adapter({}),
+    adapter: adapter(),
     prerender: {
       enabled: false
     }

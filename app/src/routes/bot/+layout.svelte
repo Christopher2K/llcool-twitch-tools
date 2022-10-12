@@ -1,14 +1,13 @@
 <script lang="ts">
-  import SideMenuItem from '@app/components/SideMenuItem.svelte'
   import DashboardLayout from '@app/components/DashboardLayout.svelte'
+
+  const menuItems = [
+    { label: 'Status', href: '/bot' },
+    { label: 'Global behaviour', href: '/bot/behaviour' },
+  ]
 </script>
 
-<DashboardLayout title="Bot dashboard">
-  <svelte:fragment slot="links">
-    <SideMenuItem href="/bot" label="Status" />
-    <SideMenuItem href="/bot/behaviour" label="Global behaviour" />
-  </svelte:fragment>
-
+<DashboardLayout {menuItems}>
   <svelte:fragment slot="content">
     <slot />
   </svelte:fragment>

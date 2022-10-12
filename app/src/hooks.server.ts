@@ -1,8 +1,8 @@
 import type { Handle, HandleFetch } from '@sveltejs/kit'
 
-import { CHAT_BOT_USERNAME } from '$env/static/private';
+import { CHAT_BOT_USERNAME } from '$env/static/private'
 
-import { PUBLIC_APP_URL, PUBLIC_API_URL } from '$env/static/public';
+import { PUBLIC_APP_URL, PUBLIC_API_URL } from '$env/static/public'
 
 import { getUserData } from '@app/api'
 
@@ -13,7 +13,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     try {
       let user = await getUserData(cookie)
       event.locals.user = user
-      event.locals.isBotUser = user.username === CHAT_BOT_USERNAME;
+      event.locals.isBotUser = user.username === CHAT_BOT_USERNAME
     } catch (e) {
       event.locals.user = undefined
     }

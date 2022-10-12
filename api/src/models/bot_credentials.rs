@@ -16,7 +16,7 @@ pub struct BotCredentials {
 }
 
 #[derive(Insertable)]
-#[table_name = "bot_credentials"]
+#[diesel(table_name = bot_credentials)]
 pub struct NewBotCredentials<'a> {
     pub access_token: &'a str,
     pub refresh_token: &'a str,
@@ -30,7 +30,7 @@ pub struct CreateBotCredentials {
 }
 
 #[derive(AsChangeset)]
-#[table_name = "bot_credentials"]
+#[diesel(table_name = bot_credentials)]
 pub struct UpdateBotCredentials<'a> {
     pub access_token: &'a str,
     pub refresh_token: &'a str,

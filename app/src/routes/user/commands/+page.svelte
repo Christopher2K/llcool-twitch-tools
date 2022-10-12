@@ -1,96 +1,103 @@
 <script lang="ts">
   import Button from '@app/components/Button.svelte'
-  import Typography from '@app/components/Typography.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
   import CommandFormModal from '@app/components/CommandFormModal.svelte'
 
-  type Command = {
-    id: string
-    name: string
-    message: string
-  }
+  import {
+    type UserCommand,
+    deleteUserCommand,
+    createUserCommand,
+    editUserCommand,
+  } from '@app/api/command'
 
-  const fakeCommands: Command[] = [
-    {
-      id: '1',
-      name: 'vsc',
-      message: 'Fuck visual studio code',
-    },
-    {
-      id: '2',
-      name: 'intellij',
-      message: 'Eat up your ram cuz the JVM is broken by design',
-    },
-    {
-      id: '3',
-      name: 'vim',
-      message: 'Use nvim old ass',
-    },
-  ]
+  import type { PageData } from './$types'
+  import { invalidateAll } from '$app/navigation'
+  import CommandRow from '@app/components/CommandRow.svelte'
+
+  // Props
+  export let data: PageData
 
   // State
   let deleteConfirmationModalOpen = false
   let commandFormModalOpen = false
-  let commandIdToDelete: string | undefined = undefined
+  let selectedCommand: UserCommand | undefined = undefined
 
   // Reactive
-  $: commandToDelete = fakeCommands.find(c => c.id === commandIdToDelete)
-  $: confirmationModalDeleteMessage = commandToDelete
-    ? `Are you sure to delete the command ${commandToDelete.name} ?`
+  $: confirmationModalDeleteMessage = selectedCommand
+    ? `Are you sure to delete the command ${selectedCommand.name} ?`
     : ''
 
   // Callback
-  function openDeleteConfirmationModal(commandId: string) {
+  function openDeleteConfirmationModal(command: UserCommand) {
     deleteConfirmationModalOpen = true
-    commandIdToDelete = commandId
+    selectedCommand = command
   }
 
   function closeDeleteConfirmationModal() {
     deleteConfirmationModalOpen = false
-    commandIdToDelete = undefined
+    selectedCommand = undefined
   }
 
-  function openCommandFormModal() {
+  function openCommandFormModal(command: UserCommand | undefined = undefined) {
+    selectedCommand = command
     commandFormModalOpen = true
   }
 
   function closeCommandFormModal() {
     commandFormModalOpen = false
+    selectedCommand = undefined
   }
 
-  function deleteCommand() {
-    console.log('Deleting command ', commandIdToDelete)
-    closeDeleteConfirmationModal()
+  async function deleteCommand() {
+    if (selectedCommand) {
+      await deleteUserCommand(selectedCommand.id)
+      await invalidateAll()
+      closeDeleteConfirmationModal()
+    }
+  }
+
+  async function onConfirmFormModal(
+    event: CustomEvent<{ id?: string; command: Omit<UserCommand, 'id'> }>,
+  ) {
+    const { id, command } = event.detail
+    if (id) {
+      await editUserCommand(id, command)
+    } else {
+      await createUserCommand(command)
+    }
+
+    await invalidateAll()
+    commandFormModalOpen = false
   }
 </script>
 
-<Typography tag="h1" class="mb-3">Commands</Typography>
+<h1>Commands</h1>
 
 <section>
-  <header class="mb-3">
-    <Typography tag="h2">Your commands</Typography>
-    <Button label="Add new command" on:click={openCommandFormModal} />
+  <header class="flex flex-col justify-start items-start mb-6">
+    <Button label="Add a new command" on:click={() => openCommandFormModal()} />
   </header>
 
-  <table>
-    <tr>
-      <th>Name</th>
-      <th>Message</th>
-      <th>Actions</th>
-    </tr>
+  <table class="w-full">
+    {#each data.userCommands as command}
+      <tr class="grid mb-5">
+        <CommandRow position="first" label="Name" hideBottomBorder>
+          {command.name}
+        </CommandRow>
 
-    {#each fakeCommands as command}
-      <tr>
-        <td>{command.name}</td>
-        <td>{command.message}</td>
-        <td class="actions">
-          <Button label="Edit" />
+        <CommandRow label="Message" hideBottomBorder>
+          {command.message}
+        </CommandRow>
+
+        <CommandRow label="Actions" position="last">
+          <Button label="Edit" on:click={() => openCommandFormModal(command)} />
           <Button
             label="Delete"
-            on:click={() => openDeleteConfirmationModal(command.id)}
+            theme="danger"
+            on:click={() => openDeleteConfirmationModal(command)}
           />
-        </td>
-      </tr>
+        </CommandRow>
+     </tr>
     {/each}
   </table>
 </section>
@@ -103,41 +110,9 @@
   on:close={closeDeleteConfirmationModal}
 />
 
-<CommandFormModal />
-
-<style lang="scss">
-  @import 'theme';
-
-  header {
-    display: inline-grid;
-    grid-template-columns: auto auto;
-    column-gap: 1rem;
-  }
-
-  table {
-    width: 100%;
-  }
-
-  tr {
-    display: grid;
-    grid-template-columns: 10rem auto 10rem;
-  }
-
-  th,
-  td {
-    justify-self: start;
-    padding: $space_xxs $space_xs;
-  }
-
-  .actions {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-wrap: wrap;
-
-    :global button {
-      margin-right: $space_xs;
-    }
-  }
-</style>
+<CommandFormModal
+  open={commandFormModalOpen}
+  command={selectedCommand}
+  on:confirm={onConfirmFormModal}
+  on:close={closeCommandFormModal}
+/>

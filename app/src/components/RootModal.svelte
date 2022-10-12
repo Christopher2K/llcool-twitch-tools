@@ -1,51 +1,30 @@
 <script lang="ts">
+  import { portal } from 'svelte-portal'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher()
 
   // Props
   export let open = false
+  export let fullSize = false
 
-  // State
-  let dialogElement: HTMLDialogElement
-
-  // Reactive
-  $: {
-    if (dialogElement) {
-      if (open) {
-        dialogElement.showModal()
-      } else {
-        dialogElement.close()
-      }
-    }
-  }
-
-// Callbacks
-  function dispatchCloseEvent() {
+  // Callback
+  function onDialogClick() {
     dispatch('close')
   }
-
-  // Exported functions
-  export function getElement() {
-    return dialogElement
-  }
-
-
 </script>
 
-<dialog class="p-3" bind:this={dialogElement}><slot /></dialog>
-
-<style lang="scss">
-  @import 'theme';
-
-  dialog {
-    border: $border_m $white;
-    outline: none;
-    border-radius: $radius_s;
-  }
-
-  dialog::backdrop {
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(5px);
-  }
-</style>
+<div
+  class="fixed top-0 left-0 z-50 flex-row justify-center items-center w-full h-full bg-gray-900/30 backdrop-blur-sm"
+  class:hidden={!open}
+  class:inline-flex={open}
+  on:click|self={onDialogClick}
+  use:portal={'body'}
+>
+  <div
+    class="flex-1 flex-shrink-0 p-3 bg-white w-full h-full md:max-w-2xl md:rounded-md md:h-auto"
+    class:w-full={fullSize}
+  >
+    <slot />
+  </div>
+</div>

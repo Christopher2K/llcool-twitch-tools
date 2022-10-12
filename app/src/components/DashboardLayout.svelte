@@ -1,94 +1,78 @@
 <script lang="ts">
-  import { LOGOUT_URL } from '@app/api'
+  import { browser } from '$app/environment'
 
-  import Typography from '@app/components/Typography.svelte'
-  import SideMenuItem from '@app/components/SideMenuItem.svelte'
-  import Button from '@app/components/Button.svelte'
+  import NavMenuItem, { type NavMenuItemDef } from '@app/components/NavMenuItem.svelte'
+  import { LOGOUT_URL } from '@app/constants'
 
   // Props
-  export let title: string
+  export let menuItems: NavMenuItemDef[] = []
 
   // State
+  let menuContainer: HTMLDivElement
   let isMenuOpen = false
 
   // Callback
+  function toggleMenu() {
+    isMenuOpen = !isMenuOpen
+  }
+
   function closeMenu() {
     isMenuOpen = false
   }
 
-  function openMenu() {
-    isMenuOpen = true
+  function onClickOutside(event: MouseEvent) {
+    const target = event.target as HTMLElement
+
+    if (!menuContainer.contains(target)) {
+      isMenuOpen = false
+    }
+  }
+
+  // Side effects
+  $: if (isMenuOpen && browser) {
+    document.addEventListener('click', onClickOutside)
+  }
+  $: if (!isMenuOpen && browser) {
+    document.removeEventListener('click', onClickOutside)
   }
 </script>
 
-<div class="root">
-  <nav class="p-3" class:open={isMenuOpen}>
-    <div class="responsive-navbar">
-      <Button class="mb-2" label="Close" on:click={closeMenu} />
-    </div>
-    <Typography tag="h2">{title}</Typography>
-    <div class="links my-3">
-      <slot name="links" />
-    </div>
+<div class="w-full h-full flex flex-col justify-start items-start">
+  <nav
+    class="flex flex-row justify-between items-center px-4 w-full bg-blue-300 h-16 relative flex-shrink-0"
+    class:open={isMenuOpen}
+  >
+    <a class="font-bold text-xl" href="/">Twitch Tools</a>
+    <button type="button" on:click|stopPropagation={toggleMenu} class="text-xl font-bold">
+      Menu
+    </button>
+    <div
+      bind:this={menuContainer}
+      class:hidden={!isMenuOpen}
+      role="menu"
+      aria-expanded={isMenuOpen}
+      class="absolute right-4 top-full bg-blue-300 mt-2 rounded-md"
+    >
+      <div class="md:hidden">
+        {#each menuItems as item}
+          <NavMenuItem on:navigate={closeMenu} href={item.href} label={item.label} />
+        {/each}
+      </div>
 
-    <SideMenuItem alternate href={LOGOUT_URL} label="Logout" />
+      <NavMenuItem on:navigate={closeMenu} href={LOGOUT_URL} label="Logout" />
+    </div>
   </nav>
-  <main class="p-3">
-    <div class="responsive-navbar">
-      <Button class="mb-2" label="Menu" on:click={openMenu} />
+
+  <div class="flex-1 w-full flex flex-row justify-start items-start">
+    <nav class="hidden md:block shrink-0 w-80 h-full bg-blue-300">
+      {#each menuItems as item}
+        <NavMenuItem on:navigate={closeMenu} href={item.href} label={item.label} />
+      {/each}
+    </nav>
+    <div class="shrink flex-1 h-full relative md:overflow-y-scroll">
+      <main class="p-4 mx-auto max-w-screen-lg h:auto md:absolute">
+        <slot name="content" />
+      </main>
     </div>
-    <slot name="content" />
-  </main>
+  </div>
 </div>
-
-<style lang="scss">
-  @import 'theme.scss';
-  @import 'responsive.scss';
-
-  .root {
-    width: 100%;
-    height: 100vh;
-
-    display: grid;
-    grid-template-columns: 15rem minmax(0, 60rem);
-    grid-gap: $space_s;
-
-    @include mobileStyle {
-      grid-template-columns: auto;
-    }
-  }
-
-  nav {
-    width: 100%;
-    background-color: $primary_dark;
-    min-height: 100%;
-
-    @include mobileStyle {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 99;
-
-      width: 100%;
-      height: 100%;
-
-      &.open {
-        display: block;
-      }
-    }
-  }
-
-  .links {
-    width: 100%;
-    display: grid;
-    grid-template-columns: auto;
-    row-gap: $space_s;
-  }
-
-  .responsive-navbar {
-    @include desktopStyle {
-      display: none;
-    }
-  }
-</style>

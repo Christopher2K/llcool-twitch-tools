@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::schema::users;
 
-#[derive(Queryable, Serialize, Debug)]
+#[derive(Identifiable, Queryable, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: Uuid,
@@ -13,7 +13,7 @@ pub struct User {
 }
 
 #[derive(Insertable)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 pub struct NewUser<'a> {
     pub username: &'a str,
     pub twitch_id: &'a str,
@@ -37,7 +37,10 @@ pub fn get_user_by_id(db: &mut PgConnection, id: &Uuid) -> Result<User, diesel::
     users::table.find(id).get_result::<User>(db)
 }
 
-pub fn create_user(db: &mut PgConnection, user: &CreateUser) -> Result<User, diesel::result::Error> {
+pub fn create_user(
+    db: &mut PgConnection,
+    user: &CreateUser,
+) -> Result<User, diesel::result::Error> {
     let new_user = NewUser {
         username: &user.username,
         twitch_id: &user.twitch_id,

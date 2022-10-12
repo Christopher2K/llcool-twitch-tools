@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply font-mono;
+  }
+
+  html,
+  body {
+    @apply w-full h-full bg-blue-200;
+    font-size: 18px;
+  }
+}
+
+@layer components {
+  .icon-emoji {
+    @apply text-3xl;
+  }
+
+  h1 {
+    @apply text-5xl font-bold mb-10;
+  }
+
+  h2 {
+    @apply text-3xl font-bold mb-3;
+  }
+
+  h3 {
+    @apply text-2xl font-bold mb-3
+  }
+}
