@@ -69,11 +69,11 @@
   }
 </script>
 
-<h1 class="text-5xl font-bold mb-10">Dashboard</h1>
+<h1>Dashboard</h1>
 
 <section>
-  <p class="text-xl mb-10">
-    In the section, you can get any available metric the bot can show
+  <p class="text-lg mb-10">
+    In this section, you can get any available metric the bot can show
   </p>
 
   {#if credentialsWarning}
@@ -88,7 +88,7 @@
     </Banner>
   {/if}
 
-  <h2 class="text-3xl font-bold mb-6">Bot global status</h2>
+  <h2>Bot global status</h2>
   <BotStatus isConnected={botInfo.connected} isConnectedToUserChat={isBotInChat} />
 
   <Button

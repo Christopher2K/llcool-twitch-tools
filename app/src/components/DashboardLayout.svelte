@@ -39,7 +39,7 @@
 
 <div class="w-full h-full flex flex-col justify-start items-start">
   <nav
-    class="flex flex-row justify-between items-center px-4 w-full bg-blue-300 h-16 relative"
+    class="flex flex-row justify-between items-center px-4 w-full bg-blue-300 h-16 relative flex-shrink-0"
     class:open={isMenuOpen}
   >
     <a class="font-bold text-xl" href="/">Twitch Tools</a>
@@ -69,8 +69,8 @@
         <NavMenuItem on:navigate={closeMenu} href={item.href} label={item.label} />
       {/each}
     </nav>
-    <div class="shrink flex-1">
-      <main class="p-4 mx-auto max-w-screen-lg">
+    <div class="shrink flex-1 h-full relative md:overflow-y-scroll">
+      <main class="p-4 mx-auto max-w-screen-lg h:auto md:absolute">
         <slot name="content" />
       </main>
     </div>

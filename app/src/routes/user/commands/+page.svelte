@@ -1,6 +1,5 @@
 <script lang="ts">
   import Button from '@app/components/Button.svelte'
-  import Typography from '@app/components/Typography.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
   import CommandFormModal from '@app/components/CommandFormModal.svelte'
 
@@ -13,6 +12,7 @@
 
   import type { PageData } from './$types'
   import { invalidateAll } from '$app/navigation'
+  import CommandRow from '@app/components/CommandRow.svelte'
 
   // Props
   export let data: PageData
@@ -71,42 +71,33 @@
   }
 </script>
 
-<Typography tag="h1" class="mb-3">Commands</Typography>
+<h1>Commands</h1>
 
 <section>
-  <header class="mb-3">
-    <Typography tag="h2">Your commands</Typography>
-    <Button label="Add new command" on:click={() => openCommandFormModal()} />
+  <header class="flex flex-col justify-start items-start mb-6">
+    <Button label="Add a new command" on:click={() => openCommandFormModal()} />
   </header>
 
-  <table>
-    <tr>
-      <th>Name</th>
-      <th>Message</th>
-      <th>Actions</th>
-    </tr>
-
+  <table class="w-full">
     {#each data.userCommands as command}
-      <tr>
-        <td>
-          <span class="label">Name</span>
-          <span class="value">{command.name}</span>
-        </td>
-        <td>
-          <span class="label">Message</span>
-          <span class="value">{command.message}</span>
-        </td>
-        <td class="actions">
-          <span class="label">Actions</span>
-          <span>
-            <Button label="Edit" on:click={() => openCommandFormModal(command)} />
-            <Button
-              label="Delete"
-              on:click={() => openDeleteConfirmationModal(command)}
-            />
-          </span>
-        </td>
-      </tr>
+      <tr class="grid mb-5">
+        <CommandRow position="first" label="Name" hideBottomBorder>
+          {command.name}
+        </CommandRow>
+
+        <CommandRow label="Message" hideBottomBorder>
+          {command.message}
+        </CommandRow>
+
+        <CommandRow label="Actions" position="last">
+          <Button label="Edit" on:click={() => openCommandFormModal(command)} />
+          <Button
+            label="Delete"
+            theme="danger"
+            on:click={() => openDeleteConfirmationModal(command)}
+          />
+        </CommandRow>
+     </tr>
     {/each}
   </table>
 </section>
@@ -125,79 +116,3 @@
   on:confirm={onConfirmFormModal}
   on:close={closeCommandFormModal}
 />
-
-<style lang="scss">
-  @import 'theme';
-  @import 'responsive';
-
-  header {
-    display: inline-grid;
-    gap: 1rem;
-
-    @include desktopStyle {
-      grid-template-columns: auto auto;
-    }
-
-    @include mobileStyle {
-      grid-template-rows: auto auto;
-    }
-  }
-
-  table {
-    width: 100%;
-  }
-
-  tr {
-    display: grid;
-
-    @include desktopStyle {
-      grid-template-columns: 5rem auto 10rem;
-    }
-
-    @include mobileStyle {
-      grid-template-rows: auto auto auto;
-    }
-
-    &:first-of-type {
-      @include mobileStyle {
-        display: none;
-      }
-    }
-  }
-
-  th,
-  td {
-    justify-self: start;
-    padding: $space_xxs $space_xs;
-  }
-
-  td {
-    @include mobileStyle {
-      display: grid;
-      grid-template-columns: 6rem auto;
-    }
-
-    .label {
-      display: none;
-
-      @include mobileStyle {
-        display: block;
-        font-weight: 700;
-      }
-    }
-  }
-
-  .actions {
-    @include desktopStyle {
-      display: flex;
-      flex-direction: row;
-      justify-content: flex-start;
-      align-items: flex-start;
-      flex-wrap: wrap;
-
-      :global button {
-        margin-right: $space_xs;
-      }
-    }
-  }
-</style>
