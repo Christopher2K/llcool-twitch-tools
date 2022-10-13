@@ -27,8 +27,9 @@ tasks:
       RUST_BACKTRACE: 1
     cmds:
       - echo Using DB at $DATABASE_URL
-      - cd api && cargo sqlx {{.CLI_ARGS}}
-  
+      - task: compose
+        vars: {CLI_ARGS: "run backend cargo sqlx {{.CLI_ARGS}}"}
+
   compose:
     cmds:
       - docker compose -f docker/docker-compose.dev.yml --project-directory . {{.CLI_ARGS}}
