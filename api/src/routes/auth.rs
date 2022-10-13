@@ -141,8 +141,12 @@ pub async fn get_twitch_access_token(
                 })?;
             }
 
-            let user_session =
-                UserSession::new(&db_user, &tokens.access_token, &tokens.refresh_token);
+            let user_session = UserSession::new(
+                &db_user,
+                &tokens.access_token,
+                &tokens.refresh_token,
+                tokens.expires_in,
+            );
 
             session.remove(&SessionKey::OAuthState.as_str());
             session

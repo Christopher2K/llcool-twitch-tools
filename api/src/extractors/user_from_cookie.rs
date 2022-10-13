@@ -1,6 +1,7 @@
 use actix_session::SessionExt;
 use actix_web::{web, FromRequest, HttpRequest};
 use std::pin::Pin;
+use time::OffsetDateTime;
 
 use futures::Future;
 
@@ -61,9 +62,10 @@ impl FromRequest for UserFromCookie {
                 Some(user_session) => {
                     log::info!(target: LOG_TARGET, "Checking user validity...");
 
-                    let is_valid = id_api::validate_user_token(&user_session.access_token)
-                        .await
-                        .map_err(|e| authentication_error.clone().inner_error(&e.to_string()))?;
+                    let is_valid = {
+                        let now = OffsetDateTime::now_utc();
+                        user_session.expire_at > now.unix_timestamp()
+                    };
 
                     log::info!(target: LOG_TARGET, "Getting db user...");
 
