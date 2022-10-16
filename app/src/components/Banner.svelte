@@ -29,7 +29,7 @@
     <header class="flex flex-row justify-between items-center rounded-t-md py-2 px-3">
       <div>
         {#if title}
-          <h3 class="font-bold text-xl">{title}</h3>
+          <h3 class="font-bold text-xl m-0">{title}</h3>
         {/if}
       </div>
 
