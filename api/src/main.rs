@@ -8,6 +8,7 @@ use diesel::pg::PgConnection;
 use diesel::r2d2;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use sqlx::postgres::PgPoolOptions;
 
 use api::{bot, routes, states};
 
@@ -27,11 +28,18 @@ async fn main() -> std::io::Result<()> {
         .build(manager)
         .expect("Failed to create pool");
 
+    let sqlx_pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await
+        .expect("Cannot create database pool");
+
     let twitch_app_credentials = web::Data::new(RwLock::new(
         states::twitch_credentials::TwitchClientCredentials::new(&config).await,
     ));
 
     let shared_pool = web::Data::new(pool.clone());
+    let shared_sqlx_pool = web::Data::new(sqlx_pool.clone());
     let shared_config = web::Data::new(config.clone());
 
     // Twitch bot
@@ -65,6 +73,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(twitch_app_credentials.clone())
             .app_data(shared_config.clone())
             .app_data(shared_bot_manager.clone())
+            .app_data(shared_sqlx_pool.clone())
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(
