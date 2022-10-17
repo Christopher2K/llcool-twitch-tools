@@ -77,14 +77,4 @@ impl BotCredentials {
         .fetch_optional(pool)
         .await
     }
-
-    pub async fn get_by_user_id_or_create(
-        pool: &Pool<Postgres>,
-        data: &CreateBotCredentials<'_>,
-    ) -> sqlx::Result<BotCredentials> {
-        Self::get_by_user_id_or_create(pool, data)
-            .await
-            .or_else(|_| Self::create(pool, data))
-            .await
-    }
 }
