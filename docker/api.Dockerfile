@@ -1,5 +1,9 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1.63 AS chef
 
+ARG SQLX_OFFLINE
+
+ENV SQLX_OFFLINE=${SQLX_OFFLINE}
+
 WORKDIR /app
 
 FROM chef AS planner

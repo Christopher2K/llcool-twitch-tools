@@ -1,0 +1,388 @@
+{
+  "db": "PostgreSQL",
+  "0ecda7210e9ef26245ae9a19a0f131e04236a13f64c081e1b83ed15ae8ab67d9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "refresh_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                INSERT INTO bot_credentials(access_token, refresh_token, user_id)\n                VALUES ($1, $2, $3)\n                RETURNING *;\n            "
+  },
+  "22f84f42d2a94556ea33712bb81242a46dff583dc6ead9064c66923ce11699a4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "twitch_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                SELECT * FROM users\n                WHERE id = $1;\n            "
+  },
+  "4641e6c1d946b4159598d87f28d07dd54e20277e9bbaa3f10362d408a02ae861": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "message",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                SELECT c.*\n                FROM user_commands c \n                JOIN users u ON u.id = c.user_id \n                WHERE u.id = $1;\n            "
+  },
+  "4fda88c62c54415060feba76b17f4d99c23e87e608ce64c7f8a766f9429c95a2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "refresh_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                UPDATE bot_credentials\n                SET (access_token, refresh_token) = ($1, $2)\n                WHERE user_id = $3 RETURNING *;\n            "
+  },
+  "6a4c145dd5aebb15c3bd39ffe90506643c10fbca6ca56cd4f6824ceb56037877": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "twitch_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar"
+        ]
+      }
+    },
+    "query": "\n                INSERT INTO users(username, twitch_id)\n                VALUES ($1, $2)\n                RETURNING *;\n            "
+  },
+  "b6455d07ff6082a4f836d2b4f04fa831b0b774f1b89ba6b7785c761fdfcf7634": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "message",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                INSERT INTO user_commands(name, message, user_id)   \n                VALUES($1, $2, $3)\n                RETURNING *;\n            "
+  },
+  "c7bb7edc1b2383c148509ef9915acdf6f5dde9da2d150992341c8e9f4660db23": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                DELETE FROM user_commands\n                WHERE id = $1\n                    AND user_id = $2;\n            "
+  },
+  "ca87bb4b32ccc712e9420274ade68fe37c49fb42225f33a3e67d98098fd66b3f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "refresh_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\n                SELECT b.*\n                FROM bot_credentials b\n                JOIN users u ON u.id = b.user_id\n                WHERE u.username = $1;\n            "
+  },
+  "d5565696bd5a396aee9ad4e70737e386ac634f8ea0d99a18d665d9f111cde4c7": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "message",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Uuid",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                UPDATE user_commands\n                SET (name, message) = ($1, $2)\n                WHERE id = $3\n                    AND user_id = $4\n                RETURNING *;\n            "
+  },
+  "f948a6a01c249585acdca19c32742eab7cd746fb4139515d24457c9ef025a59d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "access_token",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "refresh_token",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n                SELECT * from bot_credentials\n                    WHERE user_id = $1;\n            "
+  },
+  "fe909bc25d58011c9785b83299ac024c94de3c016818484674884d5ab0d6c144": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "twitch_id",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\n                SELECT * FROM users\n                WHERE username = $1;\n            "
+  }
+}
