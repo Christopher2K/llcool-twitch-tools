@@ -18,9 +18,8 @@ use super::types::BotExternalAction;
 use super::utils::{get_bot_access_token, LOG_TARGET, WEBSOCKET_CLIENT_URL};
 
 use crate::errors::AppError;
-use crate::models::user_command::get_all_users_commands;
+use crate::models::v2;
 use crate::states::app_config::AppConfig;
-use crate::types::DbPool;
 
 // Type alias
 type ThreadSafeRw<T> = Arc<RwLock<T>>;
@@ -36,7 +35,6 @@ pub enum BotStatus {
 
 pub struct BotManager {
     config: AppConfig,
-    db_pool: DbPool,
     pool: Pool<Postgres>,
     status: ThreadSafeRw<BotStatus>,
     pub channel_registry: Arc<ChannelRegistry>,
@@ -46,10 +44,9 @@ pub struct BotManager {
 }
 
 impl BotManager {
-    pub fn new(config: AppConfig, db_pool: DbPool, pool: Pool<Postgres>) -> Self {
+    pub fn new(config: AppConfig, pool: Pool<Postgres>) -> Self {
         Self {
             config,
-            db_pool,
             pool,
             status: Arc::new(RwLock::new(BotStatus::Disconnected)),
 
@@ -265,7 +262,7 @@ impl BotManager {
     ) {
         let channel_registry_handle = self.channel_registry.clone();
         let bot_external_actions_sender = self.bot_external_actions_sender.clone();
-        let db_pool = self.db_pool.clone();
+        let pool = self.pool.clone();
 
         tokio::spawn(async move {
             while let Some(external_action) = bot_external_actions_consumer.recv().await {
@@ -295,13 +292,9 @@ impl BotManager {
                                 bot_external_actions_sender.clone()
                             {
                                 if let Some(user_id) = user_id {
-                                    let commands = db_pool
-                                        .get()
-                                        .map_err(anyhow::Error::msg)
-                                        .and_then(|mut conn| {
-                                            get_all_users_commands(&mut conn, &user_id)
-                                                .map_err(anyhow::Error::msg)
-                                        });
+                                    let commands =
+                                        v2::UserCommand::get_all_by_user_id(&pool, &user_id)
+                                            .await;
 
                                     match commands {
                                         Ok(commands) => {

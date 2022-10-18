@@ -5,7 +5,7 @@ use log::{error, info};
 use tokio::sync::{mpsc, oneshot, watch};
 use twitch_irc::message::PrivmsgMessage;
 
-use crate::models::user_command::UserCommand;
+use crate::models::v2;
 
 use super::types::BotExternalAction;
 
@@ -15,7 +15,7 @@ pub type ChannelName = String;
 
 pub struct ChannelHandler {
     channel_name: String,
-    pub commands: Vec<UserCommand>,
+    pub commands: Vec<v2::UserCommand>,
     messsage_receiver: watch::Receiver<Option<PrivmsgMessage>>,
     bot_external_action_sender: mpsc::Sender<BotExternalAction>,
     pub channel_registry: Arc<ChannelRegistry>,
@@ -24,7 +24,7 @@ pub struct ChannelHandler {
 impl ChannelHandler {
     pub fn new(
         channel_name: String,
-        commands: Vec<UserCommand>,
+        commands: Vec<v2::UserCommand>,
         channel_registry: Arc<ChannelRegistry>,
         messsage_receiver: watch::Receiver<Option<PrivmsgMessage>>,
         bot_external_action_sender: mpsc::Sender<BotExternalAction>,

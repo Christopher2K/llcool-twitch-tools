@@ -1,4 +1,3 @@
-pub mod user_command;
 pub mod bot_info;
 pub mod user_session;
 

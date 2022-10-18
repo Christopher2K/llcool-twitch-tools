@@ -8,7 +8,7 @@ pub struct BotCredentials {
     pub id: Uuid,
     pub access_token: String,
     pub refresh_token: String,
-    pub user_id: Option<Uuid>,
+    pub user_id: Uuid,
 }
 
 pub struct CreateBotCredentials<'a> {
