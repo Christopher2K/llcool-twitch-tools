@@ -7,14 +7,10 @@ use crate::bot::manager;
 use crate::bot::types::BotExternalAction;
 use crate::errors::*;
 use crate::extractors::user_from_cookie::UserFromCookie;
-use crate::models::v2;
-use crate::models::bot_credentials::{
-    create_bot_credentials, get_bot_credentials_by_user_id, CreateBotCredentials,
-};
 use crate::models::bot_info::{BotInfo, CredentialsState};
+use crate::models::v2;
 use crate::states::app_config::AppConfig;
 use crate::twitch::id_api::validate_user_token;
-use crate::types::DbPool;
 
 #[get("/info")]
 pub async fn get_bot_info(
@@ -111,12 +107,9 @@ pub async fn leave_chat(
 pub async fn connect(
     user: UserFromCookie,
     app_config: web::Data<AppConfig>,
-    db: web::Data<DbPool>,
+    pool: web::Data<Pool<Postgres>>,
     bot_manager: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
-    let mut db = db
-        .get()
-        .map_err(|e| AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string()))?;
 
     if user.logged.username != app_config.chat_bot_username {
         Err(AppError::from(AppErrorType::Unauthorized))
@@ -127,24 +120,11 @@ pub async fn connect(
         match status {
             manager::BotStatus::Connected(_) => Ok(HttpResponse::Ok().finish()),
             manager::BotStatus::Disconnected => {
-                // Ensure that bot credentials does exist
-                let mb_credentials = get_bot_credentials_by_user_id(&mut db, &user.logged.id);
-                let credentials_missing =
-                    matches!(mb_credentials, Err(diesel::result::Error::NotFound));
-
-                if credentials_missing {
-                    create_bot_credentials(
-                        &mut db,
-                        &CreateBotCredentials {
-                            access_token: user.session.access_token.clone(),
-                            refresh_token: user.session.refresh_token.clone(),
-                            user_id: user.logged.id.clone(),
-                        },
-                    )
-                    .map_err(|e| {
-                        AppError::from(AppErrorType::DatabaseError).inner_error(&e.to_string())
-                    })?;
-                };
+                v2::BotCredentials::get_or_create(&pool, &v2::CreateBotCredentials {
+                    access: &user.session.access_token,
+                    refresh: &user.session.refresh_token,
+                    user_id: &user.logged.id,
+                }).await?;
 
                 manager.connect().await?;
                 Ok(HttpResponse::Ok().finish())
