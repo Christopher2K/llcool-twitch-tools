@@ -62,8 +62,7 @@ impl BotManager {
 
     pub async fn connect(&mut self) -> Result<(), AppError> {
         // Getting bot identification informations
-        let bot_access_token =
-            get_bot_access_token(&self.config, &self.db_pool, &self.pool, LOG_TARGET).await?;
+        let bot_access_token = get_bot_access_token(&self.config, &self.pool, LOG_TARGET).await?;
 
         // Prepare communication channels
         let (bot_status_sender, bot_status_consumer) = mpsc::channel::<BotStatus>(5);

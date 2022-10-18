@@ -1,16 +1,17 @@
-use actix_web::{get, web, HttpResponse};
-use diesel::OptionalExtension;
 use std::sync::RwLock;
+
+use actix_web::{get, web, HttpResponse};
+use sqlx::{Pool, Postgres};
 
 use crate::bot::manager;
 use crate::bot::types::BotExternalAction;
 use crate::errors::*;
 use crate::extractors::user_from_cookie::UserFromCookie;
+use crate::models::v2;
 use crate::models::bot_credentials::{
     create_bot_credentials, get_bot_credentials_by_user_id, CreateBotCredentials,
 };
 use crate::models::bot_info::{BotInfo, CredentialsState};
-use crate::models::user::get_user_by_username;
 use crate::states::app_config::AppConfig;
 use crate::twitch::id_api::validate_user_token;
 use crate::types::DbPool;
@@ -18,12 +19,11 @@ use crate::types::DbPool;
 #[get("/info")]
 pub async fn get_bot_info(
     user: UserFromCookie,
-    db: web::Data<DbPool>,
+    pool: web::Data<Pool<Postgres>>,
     app_config: web::Data<AppConfig>,
     bot: web::Data<RwLock<manager::BotManager>>,
 ) -> Result<HttpResponse, AppError> {
     let bot = bot.read()?;
-    let mut db = db.get()?;
 
     let status = bot.status()?;
     let channel_registry = bot.channel_registry.clone();
@@ -31,16 +31,7 @@ pub async fn get_bot_info(
     let name = &app_config.chat_bot_username;
     let connected = matches!(status, manager::BotStatus::Connected(_));
 
-    let mb_credentials =
-        get_user_by_username(&mut db, name)
-            .optional()
-            .and_then(|mb_bot_user| {
-                if let Some(bot_user) = mb_bot_user {
-                    get_bot_credentials_by_user_id(&mut db, &bot_user.id.clone()).optional()
-                } else {
-                    Ok(None)
-                }
-            })?;
+    let mb_credentials = v2::BotCredentials::get_by_username(&pool, name).await?;
 
     let credentials_state = match mb_credentials {
         Some(credentials) => {

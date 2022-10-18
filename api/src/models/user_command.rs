@@ -4,12 +4,9 @@ use uuid::Uuid;
 
 use crate::schema::user_commands;
 
-use super::user::User;
-
 type QueryError = diesel::result::Error;
 
-#[derive(Identifiable, Queryable, Associations, Serialize, Debug, AsChangeset, Clone)]
-#[diesel(belongs_to(User))]
+#[derive(Identifiable, Queryable, Serialize, Debug, AsChangeset, Clone)]
 #[diesel(table_name = user_commands)]
 #[serde(rename_all = "camelCase")]
 pub struct UserCommand {

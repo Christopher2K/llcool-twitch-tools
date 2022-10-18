@@ -7,12 +7,10 @@ use sqlx::{Pool, Postgres};
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::user_from_cookie::UserFromCookie;
-use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
 use crate::models::v2;
 use crate::states::app_config::AppConfig;
 use crate::twitch::{api, id_api};
-use crate::types::DbPool;
 
 #[get("/login")]
 pub async fn login_request_to_twitch(
@@ -49,8 +47,7 @@ pub struct AuthorizedError {
 
 #[get("/login/authorized")]
 pub async fn get_twitch_access_token(
-    pool: web::Data<DbPool>,
-    _pool: web::Data<Pool<Postgres>>,
+    pool: web::Data<Pool<Postgres>>,
     app_config: web::Data<AppConfig>,
     session: Session,
     authorized_data: Option<web::Query<AuthorizedData>>,
@@ -68,10 +65,6 @@ pub async fn get_twitch_access_token(
                 None => Err(error.clone()),
             })
     }?;
-
-    let mut db = pool.get()?;
-
-    let _pool = _pool.clone();
 
     let base_oauth_error = AppError::new(Some(AppErrorType::OAuthStateError));
     let base_twitch_request_error = AppError::new(Some(AppErrorType::TwitchApiError));
@@ -103,18 +96,23 @@ pub async fn get_twitch_access_token(
                         .inner_error(&err.to_string())
                 })?;
 
-            let db_user = get_or_create_user(
-                &mut db,
-                CreateUser {
-                    username: user_profile.login.clone(),
-                    twitch_id: user_profile.id,
-                },
-            )
-            .map_err(|err| {
-                AppError::new(Some(AppErrorType::DatabaseError))
-                    .inner_error(&err.to_string())
-                    .extra_context("Cannot create/get new twitch user")
-            })?;
+            let db_user = {
+                let mb_user = v2::User::get_by_username(&pool, &user_profile.login).await?;
+
+                match mb_user {
+                    Some(user) => user,
+                    None => {
+                        v2::User::create(
+                            &pool,
+                            &v2::CreateUser {
+                                username: &user_profile.login,
+                                twitch_id: &user_profile.id,
+                            },
+                        )
+                        .await?
+                    }
+                }
+            };
 
             if user_profile.login == app_config.chat_bot_username {
                 let data = v2::CreateBotCredentials {
@@ -124,10 +122,10 @@ pub async fn get_twitch_access_token(
                 };
 
                 let mb_updated_credentials =
-                    v2::BotCredentials::update_by_user_id(&_pool, &data).await?;
+                    v2::BotCredentials::update_by_user_id(&pool, &data).await?;
                 match mb_updated_credentials {
                     Some(updated_credentials) => updated_credentials,
-                    None => v2::BotCredentials::create(&_pool, &data).await?,
+                    None => v2::BotCredentials::create(&pool, &data).await?,
                 };
             }
 

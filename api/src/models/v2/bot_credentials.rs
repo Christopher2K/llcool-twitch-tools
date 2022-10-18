@@ -20,7 +20,7 @@ pub struct CreateBotCredentials<'a> {
 pub type UpdateBotCredentials<'a> = CreateBotCredentials<'a>;
 
 impl BotCredentials {
-    pub async fn create(
+pub async fn create(
         pool: &Pool<Postgres>,
         data: &CreateBotCredentials<'_>,
     ) -> sqlx::Result<BotCredentials> {
@@ -69,6 +69,24 @@ impl BotCredentials {
                     WHERE user_id = $1;
             ",
             user_id
+        )
+        .fetch_optional(pool)
+        .await
+    }
+
+    pub async fn get_by_username(
+        pool: &Pool<Postgres>,
+        username: &str
+    ) -> sqlx::Result<Option<BotCredentials>> {
+        sqlx::query_as!(
+            BotCredentials,
+            "
+                SELECT b.*
+                FROM bot_credentials b
+                JOIN users u ON u.id = b.user_id
+                WHERE u.username = $1;
+            ",
+            username
         )
         .fetch_optional(pool)
         .await
