@@ -1,25 +1,22 @@
+use std::pin::Pin;
+
 use actix_session::SessionExt;
 use actix_web::{web, FromRequest, HttpRequest};
-use std::pin::Pin;
+use futures::Future;
+use sqlx::{Pool, Postgres};
 use time::OffsetDateTime;
 
-use futures::Future;
-
-use crate::{
-    enums::session_key::SessionKey,
-    errors::{AppError, AppErrorType},
-    models::user::User,
-    models::{user::get_user_by_username, user_session::UserSession},
-    states::app_config::AppConfig,
-    twitch::id_api,
-    types::DbPool,
-};
+use crate::enums::session_key::SessionKey;
+use crate::errors::{AppError, AppErrorType};
+use crate::models;
+use crate::states::app_config::AppConfig;
+use crate::twitch::id_api;
 
 const LOG_TARGET: &'static str = "actix_web::extractors::user_from_cookie";
 
 pub struct UserFromCookie {
-    pub session: UserSession,
-    pub logged: User,
+    pub session: models::UserSession,
+    pub logged: models::User,
 }
 
 impl FromRequest for UserFromCookie {
@@ -41,16 +38,12 @@ impl FromRequest for UserFromCookie {
                 .app_data::<web::Data<AppConfig>>()
                 .expect("Cannot get the app config!!!");
 
-            let mut db = request
-                .app_data::<web::Data<DbPool>>()
-                .expect("Cannot get db pool config")
-                .get()
-                .map_err(|err| AppError::new(None).inner_error(&err.to_string()))?;
+            let pool = request.app_data::<web::Data<Pool<Postgres>>>().unwrap();
 
             let authentication_error = AppError::new(Some(AppErrorType::Unauthenticated));
 
             let mb_user_session = session
-                .get::<UserSession>(&SessionKey::User.as_str())
+                .get::<models::UserSession>(&SessionKey::User.as_str())
                 .map_err(|e| {
                     authentication_error
                         .clone()
@@ -71,13 +64,12 @@ impl FromRequest for UserFromCookie {
 
                     let user_session_clone = user_session.clone();
 
-                    let db_user =
-                        get_user_by_username(&mut db, &user_session_clone.username).map_err(|e| {
-                            session.remove(&SessionKey::User.as_str());
-                            AppError::new(Some(AppErrorType::DatabaseError))
-                                .inner_error(&e.to_string())
-                                .extra_context("Cannot get user db record")
-                        })?;
+                    let db_user = models::User::get_by_username(pool, &user_session_clone.username)
+                        .await?
+                        .ok_or(
+                            AppError::from(AppErrorType::DatabaseError)
+                                .extra_context("Cannot get user db record"),
+                        )?;
 
                     if is_valid {
                         log::info!(target: LOG_TARGET, "User is valid, proceed...");
@@ -94,7 +86,7 @@ impl FromRequest for UserFromCookie {
 
                         let new_user_data =
                             id_api::renew_token(&app_config, &user_session.refresh_token).await?;
-                        let new_user_session = UserSession {
+                        let new_user_session = models::UserSession {
                             access_token: new_user_data.access_token,
                             refresh_token: new_user_data.refresh_token,
                             ..user_session

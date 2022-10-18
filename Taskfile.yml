@@ -22,12 +22,12 @@ tasks:
       - task: init:cert
       - task: init:hosts
 
-  diesel:
+  sqlx:
     env:
       RUST_BACKTRACE: 1
     cmds:
       - echo Using DB at $DATABASE_URL
-      - cd api && diesel {{.CLI_ARGS}}
+      - cd api && cargo sqlx {{.CLI_ARGS}}
   
   compose:
     cmds:

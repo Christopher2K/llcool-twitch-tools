@@ -34,5 +34,5 @@ Feel free to reuse this project and have fun with it!!
 6. Save the `client ID` and the `client secret` in your `api/.env` file
 7. Run `task init`
 8. Run `task start`
-9. Apply diesel migrations and you should be good to go
+9. Apply sqlx migrations and you should be good to go
 

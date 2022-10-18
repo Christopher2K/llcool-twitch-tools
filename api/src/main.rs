@@ -4,10 +4,9 @@ use std::sync::RwLock;
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
-use diesel::pg::PgConnection;
-use diesel::r2d2;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use sqlx::postgres::PgPoolOptions;
 
 use api::{bot, routes, states};
 
@@ -22,10 +21,11 @@ async fn main() -> std::io::Result<()> {
 
     // States init
     let config = states::app_config::AppConfig::new().unwrap();
-    let manager = r2d2::ConnectionManager::<PgConnection>::new(&database_url);
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool");
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await
+        .expect("Cannot create database pool");
 
     let twitch_app_credentials = web::Data::new(RwLock::new(
         states::twitch_credentials::TwitchClientCredentials::new(&config).await,

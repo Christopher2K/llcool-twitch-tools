@@ -1,10 +1,8 @@
-use diesel::prelude::*;
 use serde::Serialize;
+use sqlx::{FromRow, Pool, Postgres};
 use uuid::Uuid;
 
-use crate::schema::users;
-
-#[derive(Identifiable, Queryable, Serialize, Debug)]
+#[derive(Serialize, Debug, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: Uuid,
@@ -12,53 +10,54 @@ pub struct User {
     pub twitch_id: String,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = users)]
-pub struct NewUser<'a> {
+pub struct CreateUser<'a> {
     pub username: &'a str,
     pub twitch_id: &'a str,
 }
 
-pub struct CreateUser {
-    pub username: String,
-    pub twitch_id: String,
-}
+impl User {
+    pub async fn create(pool: &Pool<Postgres>, data: &CreateUser<'_>) -> sqlx::Result<User> {
+        sqlx::query_as!(
+            User,
+            "
+                INSERT INTO users(username, twitch_id)
+                VALUES ($1, $2)
+                RETURNING *;
+            ",
+            data.username,
+            data.twitch_id,
+        )
+        .fetch_one(pool)
+        .await
+    }
 
-pub fn get_user_by_username(
-    db: &mut PgConnection,
-    username: &str,
-) -> Result<User, diesel::result::Error> {
-    users::table
-        .filter(users::username.eq(username))
-        .first::<User>(db)
-}
+    pub async fn get(pool: &Pool<Postgres>, id: &Uuid) -> sqlx::Result<Option<User>> {
+        sqlx::query_as!(
+            User,
+            "
+                SELECT * FROM users
+                WHERE id = $1;
+            ",
+            id
+        )
+        .fetch_optional(pool)
+        .await
+    }
 
-pub fn get_user_by_id(db: &mut PgConnection, id: &Uuid) -> Result<User, diesel::result::Error> {
-    users::table.find(id).get_result::<User>(db)
-}
+    pub async fn get_by_username(
+        pool: &Pool<Postgres>,
+        username: &str,
+    ) -> sqlx::Result<Option<User>> {
+        sqlx::query_as!(
+            User,
+            "
+                SELECT * FROM users
+                WHERE username = $1;
+            ",
+            username
+        )
+        .fetch_optional(pool)
+        .await
 
-pub fn create_user(
-    db: &mut PgConnection,
-    user: &CreateUser,
-) -> Result<User, diesel::result::Error> {
-    let new_user = NewUser {
-        username: &user.username,
-        twitch_id: &user.twitch_id,
-    };
-
-    diesel::insert_into(users::table)
-        .values(&new_user)
-        .get_result(db)
-}
-
-pub fn get_or_create_user(
-    db: &mut PgConnection,
-    user: CreateUser,
-) -> Result<User, diesel::result::Error> {
-    let maybe_user = get_user_by_username(db, &user.username);
-
-    match maybe_user {
-        Ok(user) => Ok(user),
-        Err(_) => create_user(db, &user),
     }
 }

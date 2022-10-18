@@ -1,79 +1,106 @@
-use diesel::prelude::*;
 use serde::Serialize;
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::schema::bot_credentials;
-
-type QueryError = diesel::result::Error;
-
-#[derive(Queryable, Serialize, Debug)]
+#[derive(Serialize, Debug, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct BotCredentials {
     pub id: Uuid,
     pub access_token: String,
     pub refresh_token: String,
-    pub user_id: Option<Uuid>,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = bot_credentials)]
-pub struct NewBotCredentials<'a> {
-    pub access_token: &'a str,
-    pub refresh_token: &'a str,
-    pub user_id: &'a Uuid,
-}
-
-pub struct CreateBotCredentials {
-    pub access_token: String,
-    pub refresh_token: String,
     pub user_id: Uuid,
 }
 
-#[derive(AsChangeset)]
-#[diesel(table_name = bot_credentials)]
-pub struct UpdateBotCredentials<'a> {
-    pub access_token: &'a str,
-    pub refresh_token: &'a str,
+pub struct CreateBotCredentials<'a> {
+    pub access: &'a str,
+    pub refresh: &'a str,
+    pub user_id: &'a Uuid,
 }
 
-pub fn update_bot_credentials(
-    db: &mut PgConnection,
-    bot_id: &Uuid,
-    update_data: UpdateBotCredentials,
-) -> Result<BotCredentials, QueryError> {
-    diesel::update(bot_credentials::table.filter(bot_credentials::id.eq(bot_id)))
-        .set(&update_data)
-        .get_result::<BotCredentials>(db)
-}
+pub type UpdateBotCredentials<'a> = CreateBotCredentials<'a>;
 
-pub fn create_bot_credentials(
-    db: &mut PgConnection,
-    credentials: &CreateBotCredentials,
-) -> Result<BotCredentials, QueryError> {
-    let new_credentials = NewBotCredentials {
-        access_token: &credentials.access_token,
-        refresh_token: &credentials.refresh_token,
-        user_id: &credentials.user_id,
-    };
+impl BotCredentials {
+pub async fn create(
+        pool: &Pool<Postgres>,
+        data: &CreateBotCredentials<'_>,
+    ) -> sqlx::Result<BotCredentials> {
+        sqlx::query_as!(
+            BotCredentials,
+            "
+                INSERT INTO bot_credentials(access_token, refresh_token, user_id)
+                VALUES ($1, $2, $3)
+                RETURNING *;
+            ",
+            data.access,
+            data.refresh,
+            data.user_id
+        )
+        .fetch_one(pool)
+        .await
+    }
 
-    diesel::insert_into(bot_credentials::table)
-        .values(&new_credentials)
-        .get_result::<BotCredentials>(db)
-}
+    pub async fn update_by_user_id(
+        pool: &Pool<Postgres>,
+        data: &UpdateBotCredentials<'_>,
+    ) -> sqlx::Result<Option<BotCredentials>> {
+        sqlx::query_as!(
+            BotCredentials,
+            "
+                UPDATE bot_credentials
+                SET (access_token, refresh_token) = ($1, $2)
+                WHERE user_id = $3 RETURNING *;
+            ",
+            data.access,
+            data.refresh,
+            data.user_id,
+        )
+        .fetch_optional(pool)
+        .await
+    }
 
-pub fn get_bot_credentials_by_user_id(
-    db: &mut PgConnection,
-    user_id: &Uuid,
-) -> Result<BotCredentials, QueryError> {
-    bot_credentials::table
-        .filter(bot_credentials::user_id.eq(user_id))
-        .first::<BotCredentials>(db)
-}
+    pub async fn get_by_user_id(
+        pool: &Pool<Postgres>,
+        user_id: &Uuid,
+    ) -> sqlx::Result<Option<BotCredentials>> {
+        sqlx::query_as!(
+            BotCredentials,
+            "
+                SELECT * from bot_credentials
+                    WHERE user_id = $1;
+            ",
+            user_id
+        )
+        .fetch_optional(pool)
+        .await
+    }
 
-pub fn get_or_create_bot_credentials(
-    db: &mut PgConnection,
-    bot_credentials: CreateBotCredentials,
-) -> Result<BotCredentials, QueryError> {
-    get_bot_credentials_by_user_id(db, &bot_credentials.user_id)
-        .or_else(|_| create_bot_credentials(db, &bot_credentials))
+    pub async fn get_by_username(
+        pool: &Pool<Postgres>,
+        username: &str
+    ) -> sqlx::Result<Option<BotCredentials>> {
+        sqlx::query_as!(
+            BotCredentials,
+            "
+                SELECT b.*
+                FROM bot_credentials b
+                JOIN users u ON u.id = b.user_id
+                WHERE u.username = $1;
+            ",
+            username
+        )
+        .fetch_optional(pool)
+        .await
+    }
+
+    pub async fn get_or_create(
+        pool: &Pool<Postgres>,
+        data: &CreateBotCredentials<'_>,
+    ) -> sqlx::Result<BotCredentials> {
+        let mb_existing_user = Self::get_by_user_id(pool, data.user_id).await?;
+
+        match mb_existing_user {
+            Some(existing_user) => Ok(existing_user),
+            None => Ok(Self::create(pool, data).await?)
+        }
+    }
 }

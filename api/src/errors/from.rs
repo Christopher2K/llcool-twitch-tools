@@ -11,29 +11,6 @@ impl From<AppErrorType> for AppError {
     }
 }
 
-impl From<r2d2::Error> for AppError {
-    fn from(error: r2d2::Error) -> Self {
-        AppError::from(AppErrorType::DatabaseError)
-            .inner_error(&error.to_string())
-            .extra_context("Error when trying to get the DB connection")
-    }
-}
-
-impl From<diesel::result::Error> for AppError {
-    fn from(error: diesel::result::Error) -> Self {
-        use diesel::result::Error;
-
-        match error {
-            Error::NotFound => {
-                AppError::from(AppErrorType::EntityNotFoundError).inner_error(&error.to_string())
-            }
-            any_error => {
-                AppError::from(AppErrorType::DatabaseError).inner_error(&any_error.to_string())
-            }
-        }
-    }
-}
-
 impl From<tokio_tungstenite::tungstenite::Error> for AppError {
     fn from(error: tokio_tungstenite::tungstenite::Error) -> Self {
         AppError::from(AppErrorType::WebSocketError).inner_error(&error.to_string())
@@ -79,5 +56,11 @@ impl From<reqwest::Error> for AppError {
 impl From<tokio::sync::mpsc::error::SendError<BotExternalAction>> for AppError {
     fn from(error: tokio::sync::mpsc::error::SendError<BotExternalAction>) -> Self {
         AppError::from(AppErrorType::BotCommunicationError).inner_error(&error.to_string())
+    }
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(error: sqlx::Error) -> Self {
+        AppError::from(AppErrorType::DatabaseError).inner_error(&error.to_string())
     }
 }
