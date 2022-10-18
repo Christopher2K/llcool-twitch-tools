@@ -17,11 +17,7 @@ pub struct CreateBotCredentials<'a> {
     pub user_id: &'a Uuid,
 }
 
-pub struct UpdateBotCredentials<'a> {
-    pub id: &'a Uuid,
-    pub access: &'a str,
-    pub refresh: &'a str,
-}
+pub type UpdateBotCredentials<'a> = CreateBotCredentials<'a>;
 
 impl BotCredentials {
     pub async fn create(
@@ -43,22 +39,22 @@ impl BotCredentials {
         .await
     }
 
-    pub async fn update(
+    pub async fn update_by_user_id(
         pool: &Pool<Postgres>,
         data: &UpdateBotCredentials<'_>,
-    ) -> sqlx::Result<BotCredentials> {
+    ) -> sqlx::Result<Option<BotCredentials>> {
         sqlx::query_as!(
             BotCredentials,
             "
                 UPDATE bot_credentials
                 SET (access_token, refresh_token) = ($1, $2)
-                WHERE id = $3 RETURNING *;
+                WHERE user_id = $3 RETURNING *;
             ",
             data.access,
             data.refresh,
-            data.id
+            data.user_id,
         )
-        .fetch_one(pool)
+        .fetch_optional(pool)
         .await
     }
 
@@ -76,5 +72,17 @@ impl BotCredentials {
         )
         .fetch_optional(pool)
         .await
+    }
+
+    pub async fn get_or_create(
+        pool: &Pool<Postgres>,
+        data: &CreateBotCredentials<'_>,
+    ) -> sqlx::Result<BotCredentials> {
+        let mb_existing_user = Self::get_by_user_id(pool, data.user_id).await?;
+
+        match mb_existing_user {
+            Some(existing_user) => Ok(existing_user),
+            None => Ok(Self::create(pool, data).await?)
+        }
     }
 }

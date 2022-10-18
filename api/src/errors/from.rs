@@ -81,3 +81,9 @@ impl From<tokio::sync::mpsc::error::SendError<BotExternalAction>> for AppError {
         AppError::from(AppErrorType::BotCommunicationError).inner_error(&error.to_string())
     }
 }
+
+impl From<sqlx::Error> for AppError {
+    fn from(error: sqlx::Error) -> Self {
+        AppError::from(AppErrorType::DatabaseError).inner_error(&error.to_string())
+    }
+}

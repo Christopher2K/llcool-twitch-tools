@@ -2,16 +2,14 @@ use actix_session::Session;
 use actix_web::{get, http::header, web, Error, HttpResponse};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
+use sqlx::{Pool, Postgres};
 
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::user_from_cookie::UserFromCookie;
-use crate::models::bot_credentials::{
-    get_or_create_bot_credentials, update_bot_credentials, CreateBotCredentials,
-    UpdateBotCredentials,
-};
 use crate::models::user::{get_or_create_user, CreateUser};
 use crate::models::user_session::UserSession;
+use crate::models::v2;
 use crate::states::app_config::AppConfig;
 use crate::twitch::{api, id_api};
 use crate::types::DbPool;
@@ -52,6 +50,7 @@ pub struct AuthorizedError {
 #[get("/login/authorized")]
 pub async fn get_twitch_access_token(
     pool: web::Data<DbPool>,
+    _pool: web::Data<Pool<Postgres>>,
     app_config: web::Data<AppConfig>,
     session: Session,
     authorized_data: Option<web::Query<AuthorizedData>>,
@@ -71,6 +70,8 @@ pub async fn get_twitch_access_token(
     }?;
 
     let mut db = pool.get()?;
+
+    let _pool = _pool.clone();
 
     let base_oauth_error = AppError::new(Some(AppErrorType::OAuthStateError));
     let base_twitch_request_error = AppError::new(Some(AppErrorType::TwitchApiError));
@@ -116,29 +117,18 @@ pub async fn get_twitch_access_token(
             })?;
 
             if user_profile.login == app_config.chat_bot_username {
-                get_or_create_bot_credentials(
-                    &mut db,
-                    CreateBotCredentials {
-                        access_token: tokens.access_token.clone(),
-                        refresh_token: tokens.refresh_token.clone(),
-                        user_id: db_user.id.clone(),
-                    },
-                )
-                .and_then(|credentials| {
-                    update_bot_credentials(
-                        &mut db,
-                        &credentials.id,
-                        UpdateBotCredentials {
-                            access_token: &tokens.access_token,
-                            refresh_token: &tokens.refresh_token,
-                        },
-                    )
-                })
-                .map_err(|err| {
-                    AppError::new(Some(AppErrorType::DatabaseError))
-                        .inner_error(&err.to_string())
-                        .extra_context("Cannot create/get twitch bot credentials")
-                })?;
+                let data = v2::CreateBotCredentials {
+                    access: &tokens.access_token,
+                    refresh: &tokens.refresh_token,
+                    user_id: &db_user.id,
+                };
+
+                let mb_updated_credentials =
+                    v2::BotCredentials::update_by_user_id(&_pool, &data).await?;
+                match mb_updated_credentials {
+                    Some(updated_credentials) => updated_credentials,
+                    None => v2::BotCredentials::create(&_pool, &data).await?,
+                };
             }
 
             let user_session = UserSession::new(

@@ -5,6 +5,7 @@ use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use futures_util::stream;
 use log::{error, info, warn};
+use sqlx::{Pool, Postgres};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, watch};
 use tokio_tungstenite::tungstenite::protocol::Message as SocketMessage;
@@ -36,6 +37,7 @@ pub enum BotStatus {
 pub struct BotManager {
     config: AppConfig,
     db_pool: DbPool,
+    pool: Pool<Postgres>,
     status: ThreadSafeRw<BotStatus>,
     pub channel_registry: Arc<ChannelRegistry>,
 
@@ -44,10 +46,11 @@ pub struct BotManager {
 }
 
 impl BotManager {
-    pub fn new(config: AppConfig, db_pool: DbPool) -> Self {
+    pub fn new(config: AppConfig, db_pool: DbPool, pool: Pool<Postgres>) -> Self {
         Self {
             config,
             db_pool,
+            pool,
             status: Arc::new(RwLock::new(BotStatus::Disconnected)),
 
             bot_status_sender: None,
@@ -60,7 +63,7 @@ impl BotManager {
     pub async fn connect(&mut self) -> Result<(), AppError> {
         // Getting bot identification informations
         let bot_access_token =
-            get_bot_access_token(&self.config, &self.db_pool, LOG_TARGET).await?;
+            get_bot_access_token(&self.config, &self.db_pool, &self.pool, LOG_TARGET).await?;
 
         // Prepare communication channels
         let (bot_status_sender, bot_status_consumer) = mpsc::channel::<BotStatus>(5);

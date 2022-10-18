@@ -43,7 +43,8 @@ async fn main() -> std::io::Result<()> {
     let shared_config = web::Data::new(config.clone());
 
     // Twitch bot
-    let mut bot_manager = bot::manager::BotManager::new(config.clone(), pool.clone());
+    let mut bot_manager =
+        bot::manager::BotManager::new(config.clone(), pool.clone(), sqlx_pool.clone());
     if let Err(bot_manager_error) = bot_manager.connect().await {
         log::error!(
             target: bot::LOG_TARGET,

@@ -1,4 +1,11 @@
-use crate::{errors::AppError, types::DbPool, models::{user::get_user_by_username, bot_credentials::{get_bot_credentials_by_user_id, update_bot_credentials, UpdateBotCredentials}}, twitch::id_api::renew_token, states::app_config::AppConfig};
+use sqlx::{Pool, Postgres};
+
+use crate::errors::{AppError, AppErrorType};
+use crate::models::v2;
+use crate::models::user::get_user_by_username;
+use crate::states::app_config::AppConfig;
+use crate::twitch::id_api::renew_token;
+use crate::types::DbPool;
 
 pub const LOG_TARGET: &'static str = "twitch_bot::manager";
 pub const WEBSOCKET_CLIENT_URL: &'static str = "wss://irc-ws.chat.twitch.tv:443";
@@ -6,6 +13,7 @@ pub const WEBSOCKET_CLIENT_URL: &'static str = "wss://irc-ws.chat.twitch.tv:443"
 pub async fn get_bot_access_token(
     config: &AppConfig,
     pool: &DbPool,
+    _pool: &Pool<Postgres>,
     log_target: &str,
 ) -> Result<String, AppError> {
     log::info!(
@@ -14,22 +22,21 @@ pub async fn get_bot_access_token(
     );
     let mut db = pool.get()?;
 
-    /* Automatically renewing bot credentials each and everytime we are connecting 
+    /* Automatically renewing bot credentials each and everytime we are connecting
      * the bot to Twitch WS
      */
-    let credentials = get_user_by_username(&mut db, &config.chat_bot_username)
-        .and_then(|user| get_bot_credentials_by_user_id(&mut db, &user.id))?;
+    let user = get_user_by_username(&mut db, &config.chat_bot_username)?;
+    let credentials = v2::BotCredentials::get_by_user_id(_pool, &user.id)
+        .await?
+        .ok_or(AppError::from(AppErrorType::EntityNotFoundError))?;
 
     let tokens = renew_token(config, &credentials.refresh_token).await?;
 
-    update_bot_credentials(
-        &mut db,
-        &credentials.id,
-        UpdateBotCredentials {
-            access_token: &tokens.access_token.clone(),
-            refresh_token: &tokens.refresh_token.clone(),
-        },
-    )?;
+    v2::BotCredentials::update_by_user_id(_pool, &v2::UpdateBotCredentials {
+        user_id: &user.id,
+        refresh: &tokens.refresh_token,
+        access: &tokens.access_token
+    }).await?;
 
     Ok(tokens.access_token)
 }
