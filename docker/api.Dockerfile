@@ -24,7 +24,7 @@ FROM rust:1.63-buster AS runtime
 
 RUN apt-get update 
 RUN apt-get install -y libpq-dev pkg-config libssl-dev curl
-RUN cargo install sqlx-cli --no-default-features --features postgres native-tls
+RUN cargo install sqlx-cli --no-default-features --features postgres,native-tls
 
 WORKDIR /app
 
