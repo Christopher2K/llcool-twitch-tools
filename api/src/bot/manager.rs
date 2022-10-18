@@ -18,7 +18,7 @@ use super::types::BotExternalAction;
 use super::utils::{get_bot_access_token, LOG_TARGET, WEBSOCKET_CLIENT_URL};
 
 use crate::errors::AppError;
-use crate::models::v2;
+use crate::models;
 use crate::states::app_config::AppConfig;
 
 // Type alias
@@ -293,7 +293,7 @@ impl BotManager {
                             {
                                 if let Some(user_id) = user_id {
                                     let commands =
-                                        v2::UserCommand::get_all_by_user_id(&pool, &user_id)
+                                        models::UserCommand::get_all_by_user_id(&pool, &user_id)
                                             .await;
 
                                     match commands {

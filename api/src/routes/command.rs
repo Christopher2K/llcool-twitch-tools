@@ -4,14 +4,14 @@ use uuid::Uuid;
 
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::UserFromCookie;
-use crate::models::v2;
+use crate::models;
 
 #[get("")]
 pub async fn get_user_commands(
     user: UserFromCookie,
     pool: web::Data<Pool<Postgres>>,
 ) -> Result<HttpResponse, AppError> {
-    let commands = v2::UserCommand::get_all_by_user_id(&pool, &user.logged.id).await?;
+    let commands = models::UserCommand::get_all_by_user_id(&pool, &user.logged.id).await?;
 
     Ok(HttpResponse::Ok().json(commands))
 }
@@ -19,12 +19,12 @@ pub async fn get_user_commands(
 #[post("")]
 pub async fn create_user_command(
     user: UserFromCookie,
-    data: web::Json<v2::UserCommandPayload>,
+    data: web::Json<models::UserCommandPayload>,
     pool: web::Data<Pool<Postgres>>,
 ) -> Result<HttpResponse, AppError> {
-    let command = v2::UserCommand::create(
+    let command = models::UserCommand::create(
         &pool,
-        &v2::CreateUserCommand {
+        &models::CreateUserCommand {
             user_id: &user.logged.id,
             name: &data.name,
             message: &data.message,
@@ -38,13 +38,13 @@ pub async fn create_user_command(
 #[patch("/{command_id}")]
 pub async fn update_user_command(
     command_id: web::Path<Uuid>,
-    data: web::Json<v2::UserCommandPayload>,
+    data: web::Json<models::UserCommandPayload>,
     user: UserFromCookie,
     pool: web::Data<Pool<Postgres>>,
 ) -> Result<HttpResponse, AppError> {
-    let command = v2::UserCommand::update(
+    let command = models::UserCommand::update(
         &pool,
-        &v2::UpdateUserCommand {
+        &models::UpdateUserCommand {
             id: &command_id,
             name: &data.name,
             message: &data.message,
@@ -62,7 +62,7 @@ pub async fn delete_user_command(
     user: UserFromCookie,
     pool: web::Data<Pool<Postgres>>,
 ) -> Result<HttpResponse, AppError> {
-    let query_result = v2::UserCommand::delete(&pool, &user.logged.id, &command_id).await?;
+    let query_result = models::UserCommand::delete(&pool, &user.logged.id, &command_id).await?;
 
     if query_result.rows_affected() < 1 {
         Err(AppError::from(AppErrorType::EntityNotFoundError))

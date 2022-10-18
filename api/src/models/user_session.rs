@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use time::ext::NumericalDuration;
 use uuid::Uuid;
 
-use super::v2::User;
+use super::User;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserSession {

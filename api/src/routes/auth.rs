@@ -7,8 +7,7 @@ use sqlx::{Pool, Postgres};
 use crate::enums::session_key::SessionKey;
 use crate::errors::{AppError, AppErrorType};
 use crate::extractors::user_from_cookie::UserFromCookie;
-use crate::models::user_session::UserSession;
-use crate::models::v2;
+use crate::models;
 use crate::states::app_config::AppConfig;
 use crate::twitch::{api, id_api};
 
@@ -97,14 +96,14 @@ pub async fn get_twitch_access_token(
                 })?;
 
             let db_user = {
-                let mb_user = v2::User::get_by_username(&pool, &user_profile.login).await?;
+                let mb_user = models::User::get_by_username(&pool, &user_profile.login).await?;
 
                 match mb_user {
                     Some(user) => user,
                     None => {
-                        v2::User::create(
+                        models::User::create(
                             &pool,
-                            &v2::CreateUser {
+                            &models::CreateUser {
                                 username: &user_profile.login,
                                 twitch_id: &user_profile.id,
                             },
@@ -115,21 +114,21 @@ pub async fn get_twitch_access_token(
             };
 
             if user_profile.login == app_config.chat_bot_username {
-                let data = v2::CreateBotCredentials {
+                let data = models::CreateBotCredentials {
                     access: &tokens.access_token,
                     refresh: &tokens.refresh_token,
                     user_id: &db_user.id,
                 };
 
                 let mb_updated_credentials =
-                    v2::BotCredentials::update_by_user_id(&pool, &data).await?;
+                    models::BotCredentials::update_by_user_id(&pool, &data).await?;
                 match mb_updated_credentials {
                     Some(updated_credentials) => updated_credentials,
-                    None => v2::BotCredentials::create(&pool, &data).await?,
+                    None => models::BotCredentials::create(&pool, &data).await?,
                 };
             }
 
-            let user_session = UserSession::new(
+            let user_session = models::UserSession::new(
                 &db_user,
                 &tokens.access_token,
                 &tokens.refresh_token,
