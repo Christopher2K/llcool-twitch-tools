@@ -24,7 +24,6 @@ FROM rust:1.63-buster AS runtime
 
 RUN apt-get update 
 RUN apt-get install -y libpq-dev pkg-config libssl-dev curl
-RUN cargo install diesel_cli --no-default-features --features postgres
 RUN cargo install sqlx-cli --no-default-features --features postgres native-tls
 
 WORKDIR /app
@@ -33,4 +32,4 @@ COPY ./api/migrations ./migrations
 
 COPY --from=builder /app/target/release/api /usr/local/bin
 
-ENTRYPOINT ["sh", "-c", "diesel migration run && /usr/local/bin/api"]
+ENTRYPOINT ["sh", "-c", "cargo sqlx migrate run && /usr/local/bin/api"]

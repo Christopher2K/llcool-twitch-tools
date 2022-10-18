@@ -4,8 +4,6 @@ use std::sync::RwLock;
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
-use diesel::pg::PgConnection;
-use diesel::r2d2;
 use dotenvy::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use sqlx::postgres::PgPoolOptions;
@@ -23,12 +21,7 @@ async fn main() -> std::io::Result<()> {
 
     // States init
     let config = states::app_config::AppConfig::new().unwrap();
-    let manager = r2d2::ConnectionManager::<PgConnection>::new(&database_url);
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool");
-
-    let sqlx_pool = PgPoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
         .await
@@ -39,12 +32,10 @@ async fn main() -> std::io::Result<()> {
     ));
 
     let shared_pool = web::Data::new(pool.clone());
-    let shared_sqlx_pool = web::Data::new(sqlx_pool.clone());
     let shared_config = web::Data::new(config.clone());
 
     // Twitch bot
-    let mut bot_manager =
-        bot::manager::BotManager::new(config.clone(), sqlx_pool.clone());
+    let mut bot_manager = bot::manager::BotManager::new(config.clone(), pool.clone());
     if let Err(bot_manager_error) = bot_manager.connect().await {
         log::error!(
             target: bot::LOG_TARGET,
@@ -74,7 +65,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(twitch_app_credentials.clone())
             .app_data(shared_config.clone())
             .app_data(shared_bot_manager.clone())
-            .app_data(shared_sqlx_pool.clone())
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(

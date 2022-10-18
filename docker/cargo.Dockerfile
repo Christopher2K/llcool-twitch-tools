@@ -5,7 +5,7 @@ RUN chmod +x /wait
 
 RUN apt-get update 
 RUN apt-get install -y libpq-dev pkg-config libssl-dev
-RUN cargo install diesel_cli --no-default-features --features postgres
+RUN cargo install sqlx-cli --no-default-features --features postgres,native-tls
 
 FROM base as development
 
