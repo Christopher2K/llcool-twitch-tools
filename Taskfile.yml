@@ -47,7 +47,11 @@ tasks:
   restart:
     cmds:
       - task: compose
-        vars: {CLI_ARGS: "restart"}
+        vars: {CLI_ARGS: "down --remove-orphans"}
+      - task: compose
+        vars: {CLI_ARGS: "build"}
+      - task: compose
+        vars: {CLI_ARGS: "up -d"}
 
   app:pnpm:
     cmds:
