@@ -58,6 +58,5 @@ impl User {
         )
         .fetch_optional(pool)
         .await
-
     }
 }
