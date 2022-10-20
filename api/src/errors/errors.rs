@@ -21,6 +21,7 @@ pub enum AppErrorType {
     OAuthStateError,
     Unauthenticated,
     Unauthorized,
+    Forbidden,
 }
 
 #[derive(Debug, Display, Error, Clone)]
@@ -81,6 +82,7 @@ impl error::ResponseError for AppError {
             AppErrorType::Unauthenticated => StatusCode::UNAUTHORIZED,
             AppErrorType::BotDisconnected => StatusCode::SERVICE_UNAVAILABLE,
             AppErrorType::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppErrorType::Forbidden => StatusCode::FORBIDDEN,
             AppErrorType::EntityNotFoundError => StatusCode::NOT_FOUND,
             AppErrorType::BotCommunicationError => StatusCode::SERVICE_UNAVAILABLE,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
