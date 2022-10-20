@@ -1,13 +1,12 @@
--- CREATE TABLE
 CREATE TABLE IF NOT EXISTS global_commands (	
 	id UUID DEFAULT gen_random_uuid(),
-	command_definition JSON,
+	command_definition JSONB NOT NULL,
 	PRIMARY KEY(id)
 );
 
-CREATE TABLE IF NOT EXISTS users_global_commands (
-	user_id UUID,
-	global_command_id UUID,
+CREATE TABLE IF NOT EXISTS users__global_commands (
+	user_id UUID NOT NULL,
+	global_command_id UUID NOT NULL,
 	CONSTRAINT fk_users_global_commands_user_id
 		FOREIGN KEY(user_id)
 			REFERENCES users(id)
