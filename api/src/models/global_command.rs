@@ -23,6 +23,8 @@ pub enum CommandDefinition {
     Plain { name: String, message: String },
 }
 
+pub type CommandDefinitionPayload = CommandDefinition;
+
 impl GlobalCommand {
     pub fn get_typed_definition(&self) -> Result<CommandDefinition, serde_json::Error> {
         serde_json::from_value(self.command_definition.clone())
@@ -129,6 +131,21 @@ impl GlobalCommand {
             global_command_id
         )
         .fetch_one(pool)
+        .await
+    }
+
+    pub async fn delete(
+        pool: &Pool<Postgres>,
+        global_command_id: &Uuid,
+    ) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!(
+            "
+                DELETE FROM global_commands
+                WHERE id = $1;
+            ",
+            global_command_id
+        )
+        .execute(pool)
         .await
     }
 }
