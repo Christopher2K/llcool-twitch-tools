@@ -74,6 +74,23 @@ impl GlobalCommand {
         .await
     }
 
+    pub async fn remove_from_user(
+        pool: &Pool<Postgres>,
+        user_id: &Uuid,
+        global_command_id: &Uuid,
+    ) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!(
+            "
+                DELETE FROM users__global_commands
+                WHERE user_id = $1 AND global_command_id = $2;
+            ",
+            user_id,
+            global_command_id,
+        )
+        .execute(pool)
+        .await
+    }
+
     pub async fn get_all_for_user(
         pool: &Pool<Postgres>,
         user_id: &Uuid,
@@ -95,20 +112,23 @@ impl GlobalCommand {
         .await
     }
 
-    pub async fn remove_from_user(
+    pub async fn update(
         pool: &Pool<Postgres>,
-        user_id: &Uuid,
+        command_definition: CommandDefinition,
         global_command_id: &Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!(
+    ) -> sqlx::Result<GlobalCommand> {
+        sqlx::query_as!(
+            GlobalCommand,
             "
-                DELETE FROM users__global_commands
-                WHERE user_id = $1 AND global_command_id = $2;
+                UPDATE global_commands
+                SET command_definition = $1
+                WHERE id = $2
+                RETURNING *;
             ",
-            user_id,
-            global_command_id,
+            serde_json::to_value(command_definition).unwrap(),
+            global_command_id
         )
-        .execute(pool)
+        .fetch_one(pool)
         .await
     }
 }
