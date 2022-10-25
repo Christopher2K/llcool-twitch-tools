@@ -43,3 +43,14 @@ export async function getAllGlobalCommands(fetchFn = fetch) {
 
   return await globalCommandsValidator.parseAsync(json)
 }
+
+export async function deleteGlobalCommand(commandId: string) {
+  const response = await fetch(`${PUBLIC_API_URL}/global_command/${commandId}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    handleHttpError(response)
+  }
+}

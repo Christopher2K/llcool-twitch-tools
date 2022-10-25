@@ -70,7 +70,7 @@ pub async fn delete_global_command(
         .await?
         .rows_affected();
 
-    { rows_affected > 1 }
+    { rows_affected == 1 }
         .then(|| HttpResponse::Accepted().finish())
         .ok_or(AppError::from(AppErrorType::EntityNotFoundError))
 }

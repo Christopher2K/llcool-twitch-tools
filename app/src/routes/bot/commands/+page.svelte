@@ -1,18 +1,49 @@
 <script lang="ts">
   import type { PageData } from './$types'
 
-  import type { GlobalCommand } from '@app/api'
+  import { type GlobalCommand, deleteGlobalCommand } from '@app/api'
   import Button from '@app/components/Button.svelte'
   import CommandRow from '@app/components/CommandRow.svelte'
+  import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
+  import { invalidate } from '$app/navigation'
 
+  // Props
   export let data: PageData
+
+  // State
+  let pendingDeletionId: string | undefined = undefined
+  let ongoingDeletion = false
+
+  // Computed
+  $: deleteModalOpen = pendingDeletionId !== undefined
 
   function openGlobalCommandFormModal(command: GlobalCommand | undefined = undefined) {
     console.log('Implement form for global command', command)
   }
 
   function openDeleteConfirmationModal(command: GlobalCommand) {
-    console.log('Implement openDeleteConfirmationModal', command)
+    pendingDeletionId = command.id
+  }
+
+  function closeDeleteModal() {
+    pendingDeletionId = undefined
+  }
+
+  async function confirmCommandDelete() {
+    if (pendingDeletionId === undefined) return
+
+    try {
+      ongoingDeletion = true
+
+      await deleteGlobalCommand(pendingDeletionId)
+      await invalidate('globalCommand:all')
+
+      pendingDeletionId = undefined
+    } catch (e) {
+      console.error(e)
+    } finally {
+      ongoingDeletion = false
+    }
   }
 </script>
 
@@ -67,3 +98,12 @@
     {/each}
   </table>
 </section>
+
+<ConfirmationModal
+  on:confirm={confirmCommandDelete}
+  on:close={closeDeleteModal}
+  open={deleteModalOpen}
+  loading={ongoingDeletion}
+  title="Delete global command"
+  message="Are you sure to delete this global command? Every streamer will loose access to this command!"
+/>
