@@ -4,12 +4,14 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GlobalCommand {
     pub id: Uuid,
     pub command_definition: serde_json::Value,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserGlobalCommand {
     pub id: Uuid,
     pub command_definition: serde_json::Value,
@@ -18,6 +20,7 @@ pub struct UserGlobalCommand {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "_type")]
+#[serde(rename_all = "camelCase")]
 pub enum CommandDefinition {
     Pattern { pattern: String, message: String },
     Plain { name: String, message: String },
