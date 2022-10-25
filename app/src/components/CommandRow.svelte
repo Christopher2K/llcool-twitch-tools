@@ -11,5 +11,5 @@
   class:border-b-transparent={hideBottomBorder}
 >
   <span class="font-bold underline border-r p-2 border-black">{label}</span>
-  <span class="p-2 gap-2 inline-flex flex-col md:flex-row"><slot /></span>
+  <span class="p-2 gap-2 inline-flex flex-col md:flex-row break-all"><slot /></span>
 </td>

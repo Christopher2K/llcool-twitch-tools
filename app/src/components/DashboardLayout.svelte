@@ -51,7 +51,7 @@
       class:hidden={!isMenuOpen}
       role="menu"
       aria-expanded={isMenuOpen}
-      class="absolute right-4 top-full bg-blue-300 mt-2 rounded-md"
+      class="absolute right-4 top-full bg-blue-300 mt-2 rounded-md z-10"
     >
       <div class="md:hidden">
         {#each menuItems as item}
