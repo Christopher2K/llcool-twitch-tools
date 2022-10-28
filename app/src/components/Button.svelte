@@ -9,6 +9,7 @@
   export let href: string | undefined = undefined
   export let type: HTMLButtonElement['type'] = 'button'
   export let tailwindClassNames = 'rounded-lg px-4 py-2 text-lg text-center'
+  export let form: string | undefined = undefined
 
   let className: string = ''
   export { className as class }
@@ -19,6 +20,7 @@
 {:else}
   <button
     {type}
+    {form}
     disabled={isLoading}
     on:click
     class="{tailwindClassNames} {className} {theme}"

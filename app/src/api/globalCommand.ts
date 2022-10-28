@@ -28,6 +28,8 @@ const globalCommandValidator = z.object({
 
 export type GlobalCommand = z.infer<typeof globalCommandValidator>
 
+export type GlobalCommandType = GlobalCommand['commandDefinition']['_type']
+
 const globalCommandsValidator = z.array(globalCommandValidator)
 
 export async function getAllGlobalCommands(fetchFn = fetch) {
