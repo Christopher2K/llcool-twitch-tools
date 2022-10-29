@@ -2,7 +2,7 @@
   import type { PageData } from './$types'
   import { invalidate } from '$app/navigation'
 
-  import { type GlobalCommand, deleteGlobalCommand } from '@app/api'
+  import { type GlobalCommand, deleteGlobalCommand, createGlobalCommand } from '@app/api'
   import Button from '@app/components/Button.svelte'
   import CommandRow from '@app/components/CommandRow.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
@@ -15,6 +15,7 @@
   let pendingDeletionId: string | undefined = undefined
   let formModalOpen = false
   let ongoingDeletion = false
+  let ongoingCreation = false
 
   // Computed
   $: deleteModalOpen = pendingDeletionId !== undefined
@@ -51,6 +52,23 @@
       ongoingDeletion = false
     }
   }
+
+  async function onGlobalCommandFormConfirm(
+    event: CustomEvent<GlobalCommand['commandDefinition']>,
+  ) {
+    try {
+      ongoingCreation = true
+
+      await createGlobalCommand(event.detail)
+      await invalidate('globalCommand:all')
+
+      formModalOpen = false
+    } catch (e) {
+      console.error(e)
+    } finally {
+      ongoingCreation = false
+    }
+  }
 </script>
 
 <h1>Global commands</h1>
@@ -74,7 +92,7 @@
           {command.commandDefinition._type}
         </CommandRow>
 
-        {#if command.commandDefinition._type === 'Plain'}
+        {#if command.commandDefinition._type === 'plain'}
           <CommandRow label="Name" hideBottomBorder
             >{command.commandDefinition.name}</CommandRow
           >
@@ -83,7 +101,7 @@
           >
         {/if}
 
-        {#if command.commandDefinition._type === 'Pattern'}
+        {#if command.commandDefinition._type === 'pattern'}
           <CommandRow label="Pattern" hideBottomBorder
             >{command.commandDefinition.pattern}</CommandRow
           >
@@ -116,5 +134,7 @@
 
 <GlobalCommandFormModal
   open={formModalOpen}
+  on:confirm={onGlobalCommandFormConfirm}
   on:close={closeGlobalCommandFormModal}
+  loading={ongoingCreation}
 />

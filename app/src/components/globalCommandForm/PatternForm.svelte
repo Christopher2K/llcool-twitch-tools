@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import type { PatternCommand } from '@app/formType'
+  import type { GlobalCommand } from '@app/api/globalCommand'
   import Fieldset from '../Fieldset.svelte'
 
   // Static
@@ -11,8 +11,8 @@
   export let id: string | undefined = undefined
 
   // State
-  let formCommand: PatternCommand = {
-    _type: 'Pattern',
+  let formCommand: GlobalCommand['commandDefinition'] = {
+    _type: 'pattern',
     pattern: '',
     message: '',
   }
@@ -27,22 +27,24 @@
   on:submit|preventDefault={onFormSubmit}
   class="flex flex-col justify-start items-start w-full gap-y-5"
 >
-  <Fieldset>
-    <label for="name" class="font-semibold text-lg">Pattern to look for</label>
-    <input
-      name="pattern"
-      type="text"
-      bind:value={formCommand.pattern}
-      class="w-full border-2 border-black rounded-md font-semibold p-2"
-    />
-  </Fieldset>
+  {#if formCommand._type === 'pattern'}
+    <Fieldset>
+      <label for="name" class="font-semibold text-lg">Pattern to look for</label>
+      <input
+        name="pattern"
+        type="text"
+        bind:value={formCommand.pattern}
+        class="w-full border-2 border-black rounded-md font-semibold p-2"
+      />
+    </Fieldset>
 
-  <Fieldset>
-    <label for="message" class="font-semibold text-lg">Message</label>
-    <textarea
-      name="message"
-      bind:value={formCommand.message}
-      class="w-full border-2 border-black rounded-md font-semibold p-2"
-    />
-  </Fieldset>
+    <Fieldset>
+      <label for="message" class="font-semibold text-lg">Message</label>
+      <textarea
+        name="message"
+        bind:value={formCommand.message}
+        class="w-full border-2 border-black rounded-md font-semibold p-2"
+      />
+    </Fieldset>
+  {/if}
 </form>

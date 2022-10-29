@@ -12,15 +12,16 @@
 
   // Static
   const dispatch = createEventDispatcher()
-  const forms: GlobalCommandType[] = ['Plain', 'Pattern']
+  const forms: GlobalCommandType[] = ['plain', 'pattern']
   const formIdByFormType: Record<GlobalCommandType, string> = {
-    Plain: 'plainFormId',
-    Pattern: 'patternFormId',
+    plain: 'plainFormId',
+    pattern: 'patternFormId',
   }
 
   // Props
   export let open = false
   export let initialGlobalCommand: GlobalCommand | undefined = undefined
+  export let loading = false
 
   // State
   let commandType: GlobalCommandType | undefined = undefined
@@ -38,7 +39,7 @@
     formDropdownOpen = false
   }
 
-  function onFormSelect(event: CustomEvent) {
+  function onFormSelect(event: CustomEvent<GlobalCommandType>) {
     commandType = event.detail
     formDropdownOpen = false
   }
@@ -47,8 +48,8 @@
     dispatch('close')
   }
 
-  function onGlobalCommandForm(event: CustomEvent) {
-    console.log('Form sent', event)
+  function onGlobalCommandForm(event: CustomEvent<GlobalCommand['commandDefinition']>) {
+    dispatch('confirm', event.detail)
   }
 </script>
 
@@ -70,17 +71,19 @@
   {/if}
 
   <div class="mb-5">
-    {#if commandType === 'Pattern'}
-      <PatternForm on:submit={onGlobalCommandForm} id={formIdByFormType['Pattern']} />
-    {:else if commandType === 'Plain'}
-      <PlainForm on:submit={onGlobalCommandForm} id={formIdByFormType['Plain']} />
+    {#if open}
+      {#if commandType === 'pattern'}
+        <PatternForm on:submit={onGlobalCommandForm} id={formIdByFormType['pattern']} />
+      {:else if commandType === 'plain'}
+        <PlainForm on:submit={onGlobalCommandForm} id={formIdByFormType['plain']} />
+      {/if}
     {/if}
   </div>
 
   <ModalFooter>
     {#if commandType}
-      <Button type="submit" form={activeFormId} label="Create" />
+      <Button isLoading={loading} type="submit" form={activeFormId} label="Create" />
     {/if}
-    <Button label="Close" theme="danger" on:click={onCloseModal} />
+    <Button isLoading={loading} label="Close" theme="danger" on:click={onCloseModal} />
   </ModalFooter>
 </RootModal>
