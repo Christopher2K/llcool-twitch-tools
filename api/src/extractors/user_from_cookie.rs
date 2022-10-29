@@ -86,11 +86,13 @@ impl FromRequest for UserFromCookie {
 
                         let new_user_data =
                             id_api::renew_token(&app_config, &user_session.refresh_token).await?;
-                        let new_user_session = models::UserSession {
-                            access_token: new_user_data.access_token,
-                            refresh_token: new_user_data.refresh_token,
-                            ..user_session
-                        };
+
+                        let new_user_session = models::UserSession::new(
+                            &db_user,
+                            &new_user_data.access_token,
+                            &new_user_data.refresh_token,
+                            new_user_data.expires_in,
+                        );
 
                         session
                             .insert(&SessionKey::User.as_str(), new_user_session.clone())
