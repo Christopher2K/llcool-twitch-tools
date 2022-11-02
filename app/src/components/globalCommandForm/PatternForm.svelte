@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import type { GlobalCommand } from '@app/api/globalCommand'
+  import type { PatternCommandDefinition } from '@app/api/globalCommand'
   import Fieldset from '../Fieldset.svelte'
 
   // Static
@@ -9,9 +9,10 @@
 
   // Props
   export let id: string | undefined = undefined
+  export let initialForm: PatternCommandDefinition | undefined = undefined
 
   // State
-  let formCommand: GlobalCommand['commandDefinition'] = {
+  let formCommand: PatternCommandDefinition = initialForm ?? {
     _type: 'pattern',
     pattern: '',
     message: '',

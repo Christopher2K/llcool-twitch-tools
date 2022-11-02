@@ -24,11 +24,14 @@
   export let loading = false
 
   // State
-  let commandType: GlobalCommandType | undefined = undefined
+  let controlledCommandType: GlobalCommandType | undefined =
+    initialGlobalCommand?.commandDefinition._type
   let formDropdownOpen = false
 
   // Dynamic
   $: activeFormId = commandType ? formIdByFormType[commandType] : undefined
+  $: submitButtonLabel = initialGlobalCommand ? 'Save' : 'Create'
+  $: commandType = initialGlobalCommand?.commandDefinition._type ?? controlledCommandType 
 
   // Callback
   function toggleFormDropdown() {
@@ -73,16 +76,33 @@
   <div class="mb-5">
     {#if open}
       {#if commandType === 'pattern'}
-        <PatternForm on:submit={onGlobalCommandForm} id={formIdByFormType['pattern']} />
+        <PatternForm
+          initialForm={initialGlobalCommand?.commandDefinition._type === 'pattern'
+            ? initialGlobalCommand.commandDefinition
+            : undefined}
+          on:submit={onGlobalCommandForm}
+          id={formIdByFormType['pattern']}
+        />
       {:else if commandType === 'plain'}
-        <PlainForm on:submit={onGlobalCommandForm} id={formIdByFormType['plain']} />
+        <PlainForm
+          initialForm={initialGlobalCommand?.commandDefinition._type === 'plain'
+            ? initialGlobalCommand.commandDefinition
+            : undefined}
+          on:submit={onGlobalCommandForm}
+          id={formIdByFormType['plain']}
+        />
       {/if}
     {/if}
   </div>
 
   <ModalFooter>
     {#if commandType}
-      <Button isLoading={loading} type="submit" form={activeFormId} label="Create" />
+      <Button
+        isLoading={loading}
+        type="submit"
+        form={activeFormId}
+        label={submitButtonLabel}
+      />
     {/if}
     <Button isLoading={loading} label="Close" theme="danger" on:click={onCloseModal} />
   </ModalFooter>

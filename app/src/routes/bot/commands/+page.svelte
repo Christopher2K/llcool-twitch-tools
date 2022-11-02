@@ -2,7 +2,12 @@
   import type { PageData } from './$types'
   import { invalidate } from '$app/navigation'
 
-  import { type GlobalCommand, deleteGlobalCommand, createGlobalCommand } from '@app/api'
+  import {
+    type GlobalCommand,
+    updateGlobalCommand,
+    deleteGlobalCommand,
+    createGlobalCommand,
+  } from '@app/api'
   import Button from '@app/components/Button.svelte'
   import CommandRow from '@app/components/CommandRow.svelte'
   import ConfirmationModal from '@app/components/ConfirmationModal.svelte'
@@ -13,6 +18,7 @@
 
   // State
   let pendingDeletionId: string | undefined = undefined
+  let pendingEditingCommand: GlobalCommand | undefined = undefined
   let formModalOpen = false
   let ongoingDeletion = false
   let ongoingCreation = false
@@ -22,6 +28,7 @@
 
   function openGlobalCommandFormModal(command: GlobalCommand | undefined = undefined) {
     formModalOpen = true
+    pendingEditingCommand = command
   }
 
   function openDeleteConfirmationModal(command: GlobalCommand) {
@@ -44,11 +51,10 @@
 
       await deleteGlobalCommand(pendingDeletionId)
       await invalidate('globalCommand:all')
-
-      pendingDeletionId = undefined
     } catch (e) {
       console.error(e)
     } finally {
+      pendingDeletionId = undefined
       ongoingDeletion = false
     }
   }
@@ -59,13 +65,19 @@
     try {
       ongoingCreation = true
 
-      await createGlobalCommand(event.detail)
+      if (pendingEditingCommand) {
+        await updateGlobalCommand(pendingEditingCommand.id, event.detail)
+      } else {
+        await createGlobalCommand(event.detail)
+      }
+
       await invalidate('globalCommand:all')
 
-      formModalOpen = false
     } catch (e) {
       console.error(e)
     } finally {
+      pendingEditingCommand = undefined
+      formModalOpen = false
       ongoingCreation = false
     }
   }
@@ -132,9 +144,12 @@
   message="Are you sure to delete this global command? Every streamer will loose access to this command!"
 />
 
-<GlobalCommandFormModal
-  open={formModalOpen}
-  on:confirm={onGlobalCommandFormConfirm}
-  on:close={closeGlobalCommandFormModal}
-  loading={ongoingCreation}
-/>
+{#if formModalOpen}
+  <GlobalCommandFormModal
+    initialGlobalCommand={pendingEditingCommand}
+    open={formModalOpen}
+    on:confirm={onGlobalCommandFormConfirm}
+    on:close={closeGlobalCommandFormModal}
+    loading={ongoingCreation}
+  />
+{/if}
