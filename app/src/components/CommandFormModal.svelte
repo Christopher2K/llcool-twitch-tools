@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { portal } from 'svelte-portal'
 
-  import type { Command } from '@app/models'
+  import type { Command } from '@app/formType'
 
   import RootModal from './RootModal.svelte'
   import Button from './Button.svelte'

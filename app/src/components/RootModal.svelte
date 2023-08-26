@@ -15,7 +15,7 @@
 </script>
 
 <div
-  class="fixed top-0 left-0 z-50 flex-row justify-center items-center w-full h-full bg-gray-900/30 backdrop-blur-sm"
+  class="fixed top-0 left-0 z-50 flex-row justify-center items-center w-full h-full md:bg-gray-900/30 md:backdrop-blur-sm"
   class:hidden={!open}
   class:inline-flex={open}
   on:click|self={onDialogClick}

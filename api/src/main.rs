@@ -95,6 +95,21 @@ async fn main() -> std::io::Result<()> {
                             .service(routes::command::update_user_command)
                             .service(routes::command::delete_user_command),
                     )
+                    .service(
+                        web::scope("/global_command")
+                            .service(routes::global_command::get_all_global_commands)
+                            .service(routes::global_command::create_global_command)
+                            .service(routes::global_command::edit_global_command)
+                            .service(routes::global_command::delete_global_command),
+                    )
+                    .service(
+                        web::scope("/user").service(
+                            web::scope("global_command")
+                                .service(routes::user_global_command::get_user_global_commands)
+                                .service(routes::user_global_command::enable_user_global_command)
+                                .service(routes::user_global_command::disable_user_global_command),
+                        ),
+                    )
                     .service(web::scope("/_dev").service(routes::utils::health_check)),
             )
     };

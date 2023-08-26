@@ -34,6 +34,7 @@
   "dependencies": {
     "bulma": "0.9.4",
     "firebase": "9.8.3",
+    "lucide-svelte": "0.95.0",
     "sass": "1.53.0",
     "svelte-portal": "2.2.0",
     "zod": "3.18.0"

@@ -13,6 +13,7 @@
   export let title: string | undefined = 'Confirm'
   export let message: string | undefined = undefined
   export let confirmationButtonLabel: string = 'Confirm'
+  export let loading: boolean = false
 
   // Callbacks
   function dispatchCloseEvent() {
@@ -39,8 +40,8 @@
     {/if}
 
     <ModalFooter>
-      <Button label={confirmationButtonLabel} on:click={dispatchConfirmEvent} />
-      <Button label="Close" theme="danger" on:click={dispatchCloseEvent} />
+      <Button isLoading={loading} label={confirmationButtonLabel} on:click={dispatchConfirmEvent} />
+      <Button isLoading={loading} label="Close" theme="danger" on:click={dispatchCloseEvent} />
     </ModalFooter>
   </div>
 </RootModal>

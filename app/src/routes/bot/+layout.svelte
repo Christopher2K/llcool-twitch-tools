@@ -3,7 +3,7 @@
 
   const menuItems = [
     { label: 'Status', href: '/bot' },
-    { label: 'Global behaviour', href: '/bot/behaviour' },
+    { label: 'Global commands', href: '/bot/commands' },
   ]
 </script>
 
